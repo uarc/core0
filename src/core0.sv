@@ -4,9 +4,34 @@
 module core0(
   clk,
   reset,
-  global,
-  senders,
-  receivers
+  global_kill,
+  global_incept,
+  global_send,
+  global_stream,
+  global_data,
+  global_self_permission,
+  global_self_address,
+  global_incept_permission,
+  global_incept_address,
+  sender_enables,
+  sender_kill_acks,
+  sender_incept_acks,
+  sender_send_acks,
+  sender_stream_acks,
+  receiver_enable,
+  receiver_kills,
+  receiver_kill_acks,
+  receiver_incepts,
+  receiver_incept_acks,
+  receiver_sends,
+  receiver_send_acks,
+  receiver_streams,
+  receiver_stream_acks,
+  receiver_datas,
+  receiver_self_permissions,
+  receiver_self_addresses,
+  receiver_incept_permissions,
+  receiver_incept_addresses
   );
   /// The log2 of the word width of the core
   parameter WORD_MAG = 5;
@@ -18,7 +43,38 @@ module core0(
 
   input clk;
   input reset;
-  UARCBus.Global global;
-  UARCBus.Sender [TOTAL_BUSES-1:0] senders;
-  UARCBus.Receiver [TOTAL_BUSES-1:0] receivers;
+
+  // All of the outgoing signals connected to every bus
+  output global_kill;
+  output global_incept;
+  output global_send;
+  output global_stream;
+  output [WORD_WIDTH-1:0] global_data;
+  output [WORD_WIDTH-1:0] global_self_permission;
+  output [WORD_WIDTH-1:0] global_self_address;
+  output [WORD_WIDTH-1:0] global_incept_permission;
+  output [WORD_WIDTH-1:0] global_incept_address;
+
+  // All of the signals for each bus for when this core is acting as the sender
+  output [TOTAL_BUSES-1:0] sender_enables;
+  input [TOTAL_BUSES-1:0] sender_kill_acks;
+  input [TOTAL_BUSES-1:0] sender_incept_acks;
+  input [TOTAL_BUSES-1:0] sender_send_acks;
+  input [TOTAL_BUSES-1:0] sender_stream_acks;
+
+  // All of the signals for each bus for when this core is acting as the receiver
+  input [TOTAL_BUSES-1:0] receiver_enable;
+  input [TOTAL_BUSES-1:0] receiver_kills;
+  output [TOTAL_BUSES-1:0] receiver_kill_acks;
+  input [TOTAL_BUSES-1:0] receiver_incepts;
+  output [TOTAL_BUSES-1:0] receiver_incept_acks;
+  input [TOTAL_BUSES-1:0] receiver_sends;
+  output [TOTAL_BUSES-1:0] receiver_send_acks;
+  input [TOTAL_BUSES-1:0] receiver_streams;
+  output [TOTAL_BUSES-1:0] receiver_stream_acks;
+  input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_datas;
+  input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_permissions;
+  input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_addresses;
+  input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_permissions;
+  input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_addresses;
 endmodule
