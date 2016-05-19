@@ -10,6 +10,11 @@ module core0(
   programmem_write_value,
   programmem_we,
 
+  mainmem_addr,
+  mainmem_read_value,
+  mainmem_write_value,
+  mainmem_we,
+
   global_kill,
   global_incept,
   global_send,
@@ -48,8 +53,10 @@ module core0(
   /// Not all of these buses need to be connected to an actual core.
   parameter UARC_SETS = 1;
   localparam TOTAL_BUSES = UARC_SETS * WORD_WIDTH;
-  /// This is the width of the programmem address bus
+  /// This is the width of the program memory address bus
   parameter PROGRAM_ADDR_WIDTH = 1;
+  /// This is the width of the main memory address bus
+  parameter MAIN_ADDR_WIDTH = 1;
 
   input clk;
   input reset;
@@ -59,6 +66,12 @@ module core0(
   input [7:0] programmem_read_value;
   output [7:0] programmem_write_value;
   output programmem_we;
+
+  // Main memory interface
+  output [MAIN_ADDR_WIDTH-1:0] mainmem_addr;
+  input [WORD_WIDTH-1:0] mainmem_read_value;
+  output [WORD_WIDTH-1:0] mainmem_write_value;
+  output mainmem_we;
 
   // All of the outgoing signals connected to every bus
   output global_kill;
