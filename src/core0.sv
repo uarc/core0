@@ -1,3 +1,5 @@
+`include "dstack.sv"
+
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
 /// Any adaptations to smaller or larger buses must be managed externally.
@@ -109,6 +111,47 @@ module core0(
   input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_addresses;
   input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_permissions;
   input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_addresses;
+
+  // Program counter
+  // Stores the PC of the instruction presently being executed
+  reg [PROGRAM_ADDR_WIDTH-1:0] pc;
+  reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
+
+  // Status bits
+  reg carry;
+  reg overflow;
+  reg interrupt;
+
+  // The next PC and the address from memory the next instruction will be loaded from
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
+  // This is asserted whenever the call stack is going to be pushed
+  wire call;
+  // This is asserted whenever the PC is going to jump/move
+  wire jump;
+
+  // The top of the dstack
+  wire [1:0] dstack_movement;
+  wire [WORD_WIDTH-1:0] dstack_next_top;
+  wire [WORD_WIDTH-1:0] dstack_top;
+  wire [WORD_WIDTH-1:0] dstack_second;
+  wire [WORD_WIDTH-1:0] dstack_third;
+  wire [5:0] dstack_rot_addr;
+  wire [WORD_WIDTH-1:0] dstack_rot_val;
+  wire dstack_rotate;
+  wire dstack_overflow;
+
+  dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
+    .next_top(dstack_next_top),
+    .top(dstack_top),
+    .second(dstack_second),
+    .third(dstack_third),
+    .rot_addr(dstack_rot_addr),
+    .rot_val(dstack_rot_val),
+    .rotate(dstack_rotate),
+    .overflow(dstack_overflow)
+  );
+
+  // assign pc_next = jump ? top : pc + 1;
 
   always @(posedge clk) begin
 

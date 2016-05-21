@@ -4,7 +4,7 @@ module dstack_test;
 	logic clk;
   logic reset;
   logic [1:0] movement;
-  logic [31:0] new_top;
+  logic [31:0] next_top;
   wire [31:0] top;
   wire [31:0] second;
   wire [31:0] third;
@@ -19,7 +19,7 @@ module dstack_test;
 		.clk,
 		.reset,
 		.movement,
-		.new_top,
+		.next_top,
 		.top,
 		.second,
 		.third,
@@ -39,56 +39,56 @@ module dstack_test;
 		reset = 0;
 
 		movement = S_PUSH_ONCE;
-	  new_top = 2;
+	  next_top = 2;
 	  rot_addr = 6'bx;
 	  rotate = 0;
 		clk = 0; #1 clk = 1; #1
 		$display("Push test: %s", top == 2 ? "pass" : "fail");
 
-		new_top = 8;
+		next_top = 8;
 		clk = 0; #1 clk = 1; #1
 		$display("Depth2 test: %s", top == 8 && second == 2 ? "pass" : "fail");
 
 		movement = S_POP_ONCE;
-		new_top = second;
+		next_top = second;
 		clk = 0; #1 clk = 1; #1
 		$display("Pop test: %s", top == 2 ? "pass" : "fail");
 
 		//Push 11
 		movement = S_PUSH_ONCE;
-		new_top = 11;
+		next_top = 11;
 		clk = 0; #1 clk = 1; #1
 		//Push 12
-		new_top = 12;
+		next_top = 12;
 		clk = 0; #1 clk = 1; #1
 		//Double pop
 		movement = S_POP_TWICE;
-		new_top = third;
+		next_top = third;
 		clk = 0; #1 clk = 1; #1
 		$display("Double pop test: %s", top == 2 ? "pass" : "fail");
 
 		//Push 33
 		movement = S_PUSH_ONCE;
-		new_top = 33;
+		next_top = 33;
 		clk = 0; #1 clk = 1; #1
 		//Push 57
 		movement = S_PUSH_ONCE;
-		new_top = 57;
+		next_top = 57;
 		clk = 0; #1 clk = 1; #1
 		//Push 77
 		movement = S_PUSH_ONCE;
-		new_top = 77;
+		next_top = 77;
 		clk = 0; #1 clk = 1; #1
 		//Push 79
 		movement = S_PUSH_ONCE;
-		new_top = 79;
+		next_top = 79;
 		clk = 0; #1 clk = 1; #1
 
 		//Rotate third element
 		rotate = 1;
 		movement = S_NOTHING;
 		rot_addr = 1;
-		new_top = rot_val;
+		next_top = rot_val;
 		clk = 0; #1 clk = 1; #1
 
 		//Add first part of test to sequential
@@ -98,7 +98,7 @@ module dstack_test;
 		rotate = 0;
 		rot_addr = 6'bx;
 		movement = S_POP_TWICE;
-		new_top = third;
+		next_top = third;
 		clk = 0; #1 clk = 1; #1
 
 		//Add second part of test to sequential
@@ -108,7 +108,7 @@ module dstack_test;
 		//Copy third element
 		movement = S_PUSH_ONCE;
 		rot_addr = 1;
-		new_top = rot_val;
+		next_top = rot_val;
 		clk = 0; #1 clk = 1; #1
 
 		$display("Copy test: %s", top == 2 && second == 77 ? "pass" : "fail");
@@ -116,28 +116,28 @@ module dstack_test;
 		//Push 102
 		movement = S_PUSH_ONCE;
 		rot_addr = 6'bx;
-		new_top = 102;
+		next_top = 102;
 		clk = 0; #1 clk = 1; #1
 		//Push 200
-		new_top = 200;
+		next_top = 200;
 		clk = 0; #1 clk = 1; #1
 		//Pop and mutate with first + second
 		movement = S_POP_ONCE;
-		new_top = top + second;
+		next_top = top + second;
 		clk = 0; #1 clk = 1; #1
 
 		$display("Mutate-pop test: %s", top == 302 && second == 2 ? "pass" : "fail");
 
 		//Push 44
 		movement = S_PUSH_ONCE;
-		new_top = 44;
+		next_top = 44;
 		clk = 0; #1 clk = 1; #1
 		//Push 22
-		new_top = 22;
+		next_top = 22;
 		clk = 0; #1 clk = 1; #1
 		//Double pop and mutate with first + second
 		movement = S_POP_TWICE;
-		new_top = top + second;
+		next_top = top + second;
 		clk = 0; #1 clk = 1; #1
 
 		$display("Mutate-doublepop test: %s", top == 66 && second == 2 ? "pass" : "fail");
@@ -151,7 +151,7 @@ module dstack_test;
 
 		//Push lots of stuff (65 times)
 		movement = S_PUSH_ONCE;
-		new_top = 0;
+		next_top = 0;
 		rot_addr = 6'bx;
 		rotate = 0;
 		for (int i = 0; i < 64; i++) begin

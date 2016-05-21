@@ -3,7 +3,7 @@ module dstack(
   clk,
   reset,
   movement,
-  new_top,
+  next_top,
   top,
   second,
   third,
@@ -28,7 +28,7 @@ module dstack(
   /// 11 is pop twice
   input [1:0] movement;
   /// What to replace the old top with
-  input [WIDTH-1:0] new_top;
+  input [WIDTH-1:0] next_top;
   /// The top of the stack
   output reg [WIDTH-1:0] top;
   /// The value under the top
@@ -115,7 +115,7 @@ module dstack(
 
   always @(posedge clk) begin
     // Always replace top with next_top even on rotate
-    top <= new_top;
+    top <= next_top;
     if (reset) begin
       depth <= 0;
     end else begin
