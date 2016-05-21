@@ -52,7 +52,10 @@ module core0(
   /// Each set contains WORD_WIDTH amount of buses.
   /// Not all of these buses need to be connected to an actual core.
   parameter UARC_SETS = 1;
-  localparam TOTAL_BUSES = UARC_SETS * WORD_WIDTH;
+  /// Must be less than or equal to UARC_SETS * WORD_WIDTH
+  ///
+  /// This is set automatically.
+  parameter TOTAL_BUSES = UARC_SETS * WORD_WIDTH;
   /// This is the width of the program memory address bus
   parameter PROGRAM_ADDR_WIDTH = 1;
   /// This is the width of the main memory address bus
