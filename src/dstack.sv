@@ -6,6 +6,7 @@ module dstack(
   new_top,
   top,
   second,
+  third,
   rot_addr,
   rot_val,
   rotate,
@@ -13,7 +14,8 @@ module dstack(
 );
   /// The log2 of the depth of the stack
   parameter DEPTH_MAG = 7;
-  localparam DEPTH = 1 << DEPTH_MAG;
+  /// This must always be less than or equal to 1 << DEPTH_MAG and will adjust itself
+  parameter DEPTH = 1 << DEPTH_MAG;
   /// The width of words in the stack
   parameter WIDTH = 32;
 
@@ -31,6 +33,8 @@ module dstack(
   output reg [WIDTH-1:0] top;
   /// The value under the top
   output [WIDTH-1:0] second;
+  /// The value under the second
+  output [WIDTH-1:0] third;
   /// The last address which is pushed during a rotate
   input [5:0] rot_addr;
   /// The value rotated to the top in a rotate
@@ -47,10 +51,13 @@ module dstack(
   // Rotations start from value 1, not 0
   assign rot_val = elements[rot_addr + 1'b1];
 
+  assign second = elements[1];
+  assign third = elements[2];
+
   // Overflow only happens when we push a full stack
   // We don't stop the overflow/data deletion, just trigger a fault, so no special code is necessary
   // When an overflow occurs the depth returns to 0, effectively automatically resetting the stack
-  assign overflow = movement == 2'b01 && (&depth);
+  assign overflow = movement == 2'b01 && (depth == DEPTH - 1);
 
   genvar i;
   generate
