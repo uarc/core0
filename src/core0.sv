@@ -131,7 +131,7 @@ module core0(
   // UARC bus control bits
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
-  reg [UARC_SETS-1:0][WORD_WIDTH-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
+  reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
 
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
@@ -196,6 +196,7 @@ module core0(
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
   wire interrupt_wait;
+  wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
 
   genvar i;
 
@@ -258,6 +259,8 @@ module core0(
     .out(chosen_send_bus),
     .on(chosen_send_on)
   );
+
+  assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
 
   // assign jump_addr =
   // assign pc_next = jump ? jump_addr : pc + 1;
