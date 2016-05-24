@@ -1,4 +1,5 @@
-`include "stack_element.sv"
+`include "../src/stack_element.sv"
+
 module stack(
   clk,
   push,

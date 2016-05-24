@@ -1,6 +1,6 @@
-`include "dstack.sv"
-`include "priority_encoder.sv"
-`include "alu.sv"
+`include "../src/dstack.sv"
+`include "../src/priority_encoder.sv"
+`include "../src/alu.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
