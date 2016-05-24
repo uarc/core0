@@ -1,4 +1,6 @@
 `include "dstack.sv"
+`include "priority_encoder.sv"
+`include "alu.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -55,9 +57,7 @@ module core0(
   /// Not all of these buses need to be connected to an actual core.
   parameter UARC_SETS = 1;
   /// Must be less than or equal to UARC_SETS * WORD_WIDTH
-  ///
-  /// This is set automatically.
-  parameter TOTAL_BUSES = UARC_SETS * WORD_WIDTH;
+  parameter TOTAL_BUSES = 1;
   /// This is the width of the program memory address bus
   parameter PROGRAM_ADDR_WIDTH = 1;
   /// This is the width of the main memory address bus
@@ -128,8 +128,19 @@ module core0(
   wire call;
   // This is asserted whenever the PC is going to jump/move
   wire jump;
+  // The location a jump goes to
+  wire [PROGRAM_ADDR_WIDTH-1:0] jump_addr;
 
-  // The top of the dstack
+  // Signals for the alu
+  wire [WORD_WIDTH-1:0] alu_a;
+  wire [WORD_WIDTH-1:0] alu_b;
+  wire alu_ic;
+  wire [2:0] alu_opcode;
+  wire [WORD_WIDTH-1:0] alu_out;
+  wire alu_oc;
+  wire alu_oo;
+
+  // Signals for the dstack
   wire [1:0] dstack_movement;
   wire [WORD_WIDTH-1:0] dstack_next_top;
   wire [WORD_WIDTH-1:0] dstack_top;
@@ -139,6 +150,20 @@ module core0(
   wire [WORD_WIDTH-1:0] dstack_rot_val;
   wire dstack_rotate;
   wire dstack_overflow;
+
+  // Signals for the interrupt chooser
+  wire [WORD_WIDTH-1:0] chosen_send_bus;
+  wire chosen_send_on;
+
+  alu #(.WIDTH_MAG(WORD_MAG)) alu(
+    .a(alu_a),
+    .b(alu_b),
+    .ic(alu_ic),
+    .opcode(alu_opcode),
+    .out(alu_out),
+    .oc(alu_oc),
+    .oo(alu_oo)
+  );
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
     .next_top(dstack_next_top),
@@ -151,6 +176,13 @@ module core0(
     .overflow(dstack_overflow)
   );
 
+  priority_encoder #(.OUT_WIDTH(WORD_WIDTH), .LINES(TOTAL_BUSES)) chosen_send_priority_encoder(
+    .lines(receiver_sends),
+    .out(chosen_send_bus),
+    .on(chosen_send_on)
+  );
+
+  // assign jump_addr =
   // assign pc_next = jump ? top : pc + 1;
 
   always @(posedge clk) begin

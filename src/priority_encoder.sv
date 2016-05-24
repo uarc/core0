@@ -3,7 +3,9 @@ module priority_encoder(
 	out,
 	on,
 );
+	/// The width if the index address output
 	parameter OUT_WIDTH = 1;
+	/// The amount of actual lines which must be less than or equal to 1 << OUT_WIDTH
 	parameter LINES = 1 << OUT_WIDTH;
 
 	input [LINES-1:0] lines;
