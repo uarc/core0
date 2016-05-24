@@ -1,4 +1,5 @@
 `include "../src/dstack.sv"
+`include "../src/stack.sv"
 `include "../src/priority_encoder.sv"
 `include "../src/alu.sv"
 
@@ -62,6 +63,8 @@ module core0(
   parameter PROGRAM_ADDR_WIDTH = 1;
   /// This is the width of the main memory address bus
   parameter MAIN_ADDR_WIDTH = 1;
+  /// This is how many recursions are possible with the cstack
+  parameter CSTACK_DEPTH = 2;
 
   input clk;
   input reset;
@@ -152,6 +155,22 @@ module core0(
   wire dstack_rotate;
   wire dstack_overflow;
 
+  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (WORD_WIDTH + 1) + 1;
+
+  // Signals for the cstack
+  wire cstack_push;
+  wire cstack_pop;
+  // cstack insert signals
+  wire [PROGRAM_ADDR_WIDTH-1:0] cstack_insert_progaddr;
+  wire [3:0][WORD_WIDTH-1:0] cstack_insert_dcs;
+  wire [3:0] cstack_insert_dc_modifies;
+  wire cstack_insert_interrupt;
+  // cstack top signals
+  wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
+  wire [3:0][WORD_WIDTH-1:0] cstack_top_dcs;
+  wire [3:0] cstack_top_dc_modifies;
+  wire cstack_top_interrupt;
+
   // Signals for the interrupt chooser
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
@@ -177,6 +196,30 @@ module core0(
     .overflow(dstack_overflow)
   );
 
+  stack #(.WIDTH(CSTACK_WIDTH), .DEPTH(CSTACK_DEPTH)) cstack(
+    .clk,
+    .push(cstack_push),
+    .pop(cstack_pop),
+    .insert({
+      cstack_insert_progaddr,
+      cstack_insert_dcs[0],
+      cstack_insert_dcs[1],
+      cstack_insert_dcs[2],
+      cstack_insert_dcs[3],
+      cstack_insert_dc_modifies,
+      cstack_insert_interrupt
+    }),
+    .top({
+      cstack_top_progaddr,
+      cstack_top_dcs[0],
+      cstack_top_dcs[1],
+      cstack_top_dcs[2],
+      cstack_top_dcs[3],
+      cstack_top_dc_modifies,
+      cstack_top_interrupt
+    })
+  );
+
   priority_encoder #(.OUT_WIDTH(WORD_WIDTH), .LINES(TOTAL_BUSES)) chosen_send_priority_encoder(
     .lines(receiver_sends),
     .out(chosen_send_bus),
@@ -184,7 +227,7 @@ module core0(
   );
 
   // assign jump_addr =
-  // assign pc_next = jump ? top : pc + 1;
+  // assign pc_next = jump ? jump_addr : pc + 1;
 
   always @(posedge clk) begin
 
