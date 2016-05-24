@@ -93,7 +93,7 @@ module dstack(
     ),
     .above(elements[DEPTH-3]),
     .below(elements[DEPTH-1]),
-    .below_twice(0),
+    .below_twice({WIDTH{1'bx}}),
     .out(elements[DEPTH-2])
   );
 
@@ -108,8 +108,8 @@ module dstack(
       ) : movement
     ),
     .above(elements[DEPTH-2]),
-    .below(0),
-    .below_twice(0),
+    .below({WIDTH{1'bx}}),
+    .below_twice({WIDTH{1'bx}}),
     .out(elements[DEPTH-1])
   );
 

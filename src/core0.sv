@@ -121,6 +121,7 @@ module core0(
   reg carry;
   reg overflow;
   reg interrupt;
+  reg interrupt_active;
 
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
