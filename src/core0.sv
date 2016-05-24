@@ -196,25 +196,19 @@ module core0(
     .overflow(dstack_overflow)
   );
 
-  stack #(.WIDTH(CSTACK_WIDTH), .DEPTH(CSTACK_DEPTH)) cstack(
+  stack #(.WIDTH(CSTACK_WIDTH), .DEPTH(CSTACK_DEPTH), .VISIBLES(1)) cstack(
     .clk,
     .push(cstack_push),
     .pop(cstack_pop),
     .insert({
       cstack_insert_progaddr,
-      cstack_insert_dcs[0],
-      cstack_insert_dcs[1],
-      cstack_insert_dcs[2],
-      cstack_insert_dcs[3],
+      cstack_insert_dcs,
       cstack_insert_dc_modifies,
       cstack_insert_interrupt
     }),
-    .top({
+    .tops({
       cstack_top_progaddr,
-      cstack_top_dcs[0],
-      cstack_top_dcs[1],
-      cstack_top_dcs[2],
-      cstack_top_dcs[3],
+      cstack_top_dcs,
       cstack_top_dc_modifies,
       cstack_top_interrupt
     })

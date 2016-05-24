@@ -5,14 +5,14 @@ module stack_test;
   reg push;
   reg pop;
   reg [31:0] insert;
-  wire [31:0] top;
+  wire [0:0][31:0] tops;
 
-  stack #(.WIDTH(32), .DEPTH(8)) stack(
+  stack #(.WIDTH(32), .DEPTH(8), .VISIBLES(1)) stack(
     .clk,
     .push,
     .pop,
     .insert,
-    .top
+    .tops
   );
 
   reg test_failure;
@@ -28,7 +28,7 @@ module stack_test;
     test_failure = 0;
 
     for (int i = 0; i < 8; i++) begin
-      if (top != 7-i)
+      if (tops[0] != 7-i)
         test_failure = 1;
       push = 0;
       pop = 1;

@@ -5,23 +5,29 @@ module stack(
   push,
   pop,
   insert,
-  top,
+  tops,
 );
   parameter WIDTH = 32;
   /// Depth cannot be less than 2
   parameter DEPTH = 2;
+  parameter VISIBLES = 1;
 
   input clk;
   input push;
   input pop;
   input [WIDTH-1:0] insert;
-  output [WIDTH-1:0] top;
+  output [VISIBLES-1:0][WIDTH-1:0] tops;
 
   wire [DEPTH-1:0][WIDTH-1:0] data;
 
-  assign top = data[0];
-
   genvar i;
+
+  generate
+    for (i = 0; i < VISIBLES; i = i + 1) begin : STACK_TOPS_LOOP
+      assign tops[i] = data[i];
+    end
+  endgenerate
+
   generate
     for (i = 1; i < DEPTH-1; i = i + 1) begin : STACK_ELEMENT_LOOP
       stack_element #(.WIDTH(WIDTH)) stack_element(
