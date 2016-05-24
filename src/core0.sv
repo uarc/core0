@@ -131,6 +131,7 @@ module core0(
   // UARC bus control bits
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
+  reg [UARC_SETS-1:0][WORD_WIDTH-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
 
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
@@ -194,6 +195,7 @@ module core0(
   wire [TOTAL_BUSES-1:0] masked_sends;
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
+  wire interrupt_wait;
 
   genvar i;
 
@@ -246,7 +248,8 @@ module core0(
 
   generate
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
-      assign masked_sends[i] = receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH];
+      assign masked_sends[i] = interrupt_wait ? (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
+        (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH]);
     end
   endgenerate
 
