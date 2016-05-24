@@ -65,6 +65,8 @@ module core0(
   parameter MAIN_ADDR_WIDTH = 1;
   /// This is how many recursions are possible with the cstack
   parameter CSTACK_DEPTH = 2;
+  /// This is how many loops can be nested with the lstack
+  parameter LSTACK_DEPTH = 3;
 
   input clk;
   input reset;
@@ -126,6 +128,8 @@ module core0(
   reg interrupt;
   reg interrupt_active;
 
+  reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_enable_bits;
+
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
   // This is asserted whenever the call stack is going to be pushed
@@ -171,9 +175,25 @@ module core0(
   wire [3:0] cstack_top_dc_modifies;
   wire cstack_top_interrupt;
 
+  localparam LSTACK_WIDTH = 2 * WORD_WIDTH + 2 * PROGRAM_ADDR_WIDTH;
+
+  // Signals for the lstack
+  wire lstack_push;
+  wire lstack_pop;
+  wire [LSTACK_WIDTH-1:0] lstack_insert;
+  wire [2:0][LSTACK_WIDTH-1:0] lstack_tops;
+  // lstack registers for active loop
+  reg [WORD_WIDTH-1:0] lstack_index;
+  reg [WORD_WIDTH-1:0] lstack_total;
+  reg [PROGRAM_ADDR_WIDTH-1:0] lstack_beginning;
+  reg [PROGRAM_ADDR_WIDTH-1:0] lstack_ending;
+
   // Signals for the interrupt chooser
+  wire [TOTAL_BUSES-1:0] masked_sends;
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
+
+  genvar i;
 
   alu #(.WIDTH_MAG(WORD_MAG)) alu(
     .a(alu_a),
@@ -214,8 +234,22 @@ module core0(
     })
   );
 
+  stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
+    .clk,
+    .push(lstack_push),
+    .pop(lstack_pop),
+    .insert(lstack_insert),
+    .tops(lstack_tops)
+  );
+
+  generate
+    for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
+      assign masked_sends[i] = receiver_sends[i] & bus_enable_bits[i/WORD_WIDTH][i%WORD_WIDTH];
+    end
+  endgenerate
+
   priority_encoder #(.OUT_WIDTH(WORD_WIDTH), .LINES(TOTAL_BUSES)) chosen_send_priority_encoder(
-    .lines(receiver_sends),
+    .lines(masked_sends),
     .out(chosen_send_bus),
     .on(chosen_send_on)
   );
