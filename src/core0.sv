@@ -122,6 +122,15 @@ module core0(
   reg [PROGRAM_ADDR_WIDTH-1:0] pc;
   reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
 
+  // The first bit indicates if the word is finished/complete
+  localparam CONVERYOR_WIDTH = 1 + WORD_WIDTH;
+
+  // Conveyors (0 is normal operation and 1 is for interrupts)
+  // Note: There must also be two sets of pipelined modules for normal and interrupt mode
+  reg [1:0][15:0][CONVERYOR_WIDTH-1:0] conveyors;
+  // The head address of the conveyor (it only decrements)
+  reg [1:0][3:0] conveyor_heads;
+
   // Status bits
   reg carry;
   reg overflow;
