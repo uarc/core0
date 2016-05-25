@@ -5,7 +5,7 @@ module alu_control(
   top,
   second,
   carry,
-  dc_vals
+  dc_vals,
 
   alu_a,
   alu_b,
@@ -18,6 +18,7 @@ module alu_control(
   input [WORD_WIDTH-1:0] top;
   input [WORD_WIDTH-1:0] second;
   input carry;
+  input [3:0][WORD_WIDTH-1:0] dc_vals;
 
   output reg [WORD_WIDTH-1:0] alu_a;
   output reg [WORD_WIDTH-1:0] alu_b;
