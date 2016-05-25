@@ -5,6 +5,7 @@ module alu_control(
   top,
   second,
   carry,
+  dc_vals
 
   alu_a,
   alu_b,
@@ -25,6 +26,7 @@ module alu_control(
 
   always @* begin
     case (instruction)
+
       default: begin
         alu_a = {WORD_WIDTH{1'bx}};
         alu_b = {WORD_WIDTH{1'bx}};
