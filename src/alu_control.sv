@@ -1,4 +1,5 @@
 `include "../src/instructions.sv"
+`include "../src/alu_opcodes.sv"
 
 module alu_control(
   instruction,
@@ -26,8 +27,13 @@ module alu_control(
   output reg [2:0] alu_opcode;
 
   always @* begin
-    case (instruction)
-
+    casez (instruction)
+      `I_ADDZ: begin
+        alu_a = dc_vals[instruction[1:0]];
+        alu_b = top;
+        alu_ic = 0;
+        alu_opcode = `OP_ADD;
+      end
       default: begin
         alu_a = {WORD_WIDTH{1'bx}};
         alu_b = {WORD_WIDTH{1'bx}};
