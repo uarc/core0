@@ -2,6 +2,8 @@
 `include "../src/stack.sv"
 `include "../src/priority_encoder.sv"
 `include "../src/alu.sv"
+`include "../src/instructions.sv"
+`include "../src/jump_immediate_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -142,8 +144,14 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
 
+  // The instruction being executed this cycle
+  wire [7:0] instruction;
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
+  // This is asserted when an immediate jump is to happen
+  wire jump_immediate;
+  // This is asserted when a stack jump is to happen
+  wire jump_stack;
   // This is asserted whenever the call stack is going to be pushed
   wire call;
   // This is asserted whenever the PC is going to jump/move
@@ -269,10 +277,25 @@ module core0(
     .on(chosen_send_on)
   );
 
-  assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
+  jump_immediate_control #(.WORD_WIDTH(WORD_WIDTH)) jump_immediate_control(
+    .instruction,
+    .top(dstack_top),
+    .second(dstack_second),
+    .carry,
+    .overflow,
+    .interrupt,
+    .jump_immediate
+  );
 
-  // assign jump_addr =
+  assign call = instruction == `I_CALLI || instruction == `I_CALL;
+
+  assign instruction = programmem_read_value;
+
+  //assign jump_addr =
   // assign pc_next = jump ? jump_addr : pc + 1;
+
+  assign interrupt_wait = instruction == `I_WAIT;
+  assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
 
   always @(posedge clk) begin
     if (reset) begin
