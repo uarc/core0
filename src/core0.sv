@@ -123,6 +123,15 @@ module core0(
   // Stores the PC of the instruction presently being executed
   reg [PROGRAM_ADDR_WIDTH-1:0] pc;
   reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
+  // Determines the direction of DC writes (0 - post-increment; 1 - pre-decrement)
+  reg [3:0] dc_directions;
+  // Indicates if this subroutine set the dcs disallowing them to be restored
+  reg [3:0] dc_modifications;
+  reg [3:0][WORD_WIDTH-1:0] dc_vals;
+  // Indicates if a dc was advanced last cycle and a new value must be loaded from memory
+  reg dc_advance;
+  // Which DC to mutate on the cycle following a DC movement where dc_advance is set
+  reg [1:0] dc_mutate;
 
   // The first bit indicates if the word is finished/complete
   localparam CONVERYOR_WIDTH = 1 + WORD_WIDTH;
@@ -156,8 +165,6 @@ module core0(
   wire call;
   // This is asserted whenever the PC is going to jump/move
   wire jump;
-  // The location a jump goes to
-  wire [PROGRAM_ADDR_WIDTH-1:0] jump_addr;
 
   // Signals for the alu
   wire [WORD_WIDTH-1:0] alu_a;
@@ -287,12 +294,16 @@ module core0(
     .jump_immediate
   );
 
+  assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL;
 
   assign instruction = programmem_read_value;
 
-  //assign jump_addr =
-  // assign pc_next = jump ? jump_addr : pc + 1;
+  assign pc_next =
+    chosen_send_on ? chosen_interrupt_address :
+    jump_immediate ? dc_vals[0] :
+    jump_stack ? dstack_top :
+    pc + 1;
 
   assign interrupt_wait = instruction == `I_WAIT;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
@@ -301,6 +312,10 @@ module core0(
     if (reset) begin
       pc <= 0;
       dcs <= 0;
+      dc_vals <= 0;
+      dc_directions <= 0;
+      dc_modifications <= 0;
+      dc_advance <= 0;
       conveyors <= 0;
       conveyor_heads <= 0;
 
