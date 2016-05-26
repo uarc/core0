@@ -82,6 +82,48 @@ module alu_control(
         alu_ic = carry;
         alu_opcode = `OP_ADD;
       end
+      `I_LSL: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_LSL;
+      end
+      `I_LSR: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_LSR;
+      end
+      `I_CSL: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_CSL;
+      end
+      `I_CSR: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_CSR;
+      end
+      `I_ASR: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_ASR;
+      end
+      `I_AND: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_AND;
+      end
+      `I_OR: begin
+        alu_a = second;
+        alu_b = top;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_OR;
+      end
       // Make the default case OR so less stuff switches around consuming power
       default: begin
         alu_a = {WORD_WIDTH{1'bx}};
