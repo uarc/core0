@@ -159,6 +159,8 @@ module core0(
 
   // The instruction being executed this cycle
   wire [7:0] instruction;
+  // The PC + 1
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
   // This is asserted when an immediate jump is to happen
@@ -280,6 +282,14 @@ module core0(
     })
   );
 
+  // Assign signals for cstack
+  assign cstack_insert_progaddr =
+    chosen_send_on ? (jump_immediate ? dc_vals[0] : jump_stack ? dstack_top : pc_advance) : pc_advance;
+  assign cstack_insert_dcs = dc_ctrl_nexts;
+  assign cstack_insert_dc_directions = dc_ctrl_next_directions;
+  assign cstack_insert_dc_modifies = dc_ctrl_next_modifies;
+  assign cstack_insert_interrupt = chosen_send_on && !interrupt_wait;
+
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
     .clk,
     .push(lstack_push),
@@ -332,11 +342,12 @@ module core0(
 
   assign instruction = programmem_read_value;
 
+  assign pc_advance = pc + 1;
   assign pc_next =
     chosen_send_on ? chosen_interrupt_address :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
-    pc + 1;
+    pc_advance;
 
   assign interrupt_wait = instruction == `I_WAIT;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
