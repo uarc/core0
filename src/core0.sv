@@ -4,6 +4,7 @@
 `include "../src/alu.sv"
 `include "../src/instructions.sv"
 `include "../src/jump_immediate_control.sv"
+`include "../src/dc_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -17,7 +18,8 @@ module core0(
   programmem_write_value,
   programmem_we,
 
-  mainmem_addr,
+  mainmem_read_addr,
+  mainmem_write_addr,
   mainmem_read_value,
   mainmem_write_value,
   mainmem_we,
@@ -76,11 +78,12 @@ module core0(
   // Program memory interface
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [7:0] programmem_read_value;
-  output [7:0] programmem_write_value;
+  output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
   // Main memory interface
-  output [MAIN_ADDR_WIDTH-1:0] mainmem_addr;
+  output [MAIN_ADDR_WIDTH-1:0] mainmem_read_addr;
+  output [MAIN_ADDR_WIDTH-1:0] mainmem_write_addr;
   input [WORD_WIDTH-1:0] mainmem_read_value;
   output [WORD_WIDTH-1:0] mainmem_write_value;
   output mainmem_we;
@@ -123,13 +126,14 @@ module core0(
   // Stores the PC of the instruction presently being executed
   reg [PROGRAM_ADDR_WIDTH-1:0] pc;
   reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
+  wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_nexts;
   // Determines the direction of DC writes (0 - post-increment; 1 - pre-decrement)
   reg [3:0] dc_directions;
   // Indicates if this subroutine set the dcs disallowing them to be restored
-  reg [3:0] dc_modifications;
+  reg [3:0] dc_modifies;
   reg [3:0][WORD_WIDTH-1:0] dc_vals;
   // Indicates if a dc was advanced last cycle and a new value must be loaded from memory
-  reg dc_advance;
+  reg dc_reload;
   // Which DC to mutate on the cycle following a DC movement where dc_advance is set
   reg [1:0] dc_mutate;
 
@@ -186,7 +190,7 @@ module core0(
   wire dstack_rotate;
   wire dstack_overflow;
 
-  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (WORD_WIDTH + 1) + 1;
+  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (WORD_WIDTH + 2) + 1;
 
   // Signals for the cstack
   wire cstack_push;
@@ -194,11 +198,13 @@ module core0(
   // cstack insert signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_insert_progaddr;
   wire [3:0][WORD_WIDTH-1:0] cstack_insert_dcs;
+  wire [3:0] cstack_insert_dc_directions;
   wire [3:0] cstack_insert_dc_modifies;
   wire cstack_insert_interrupt;
   // cstack top signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
   wire [3:0][WORD_WIDTH-1:0] cstack_top_dcs;
+  wire [3:0] cstack_top_dc_directions;
   wire [3:0] cstack_top_dc_modifies;
   wire cstack_top_interrupt;
 
@@ -221,6 +227,15 @@ module core0(
   wire chosen_send_on;
   wire interrupt_wait;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
+
+  // Signals for dc_control
+  wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_ctrl_nexts;
+  wire [3:0] dc_ctrl_next_directions;
+  wire [3:0] dc_ctrl_next_modifies;
+  wire dc_ctrl_write;
+  wire [MAIN_ADDR_WIDTH-1:0] dc_ctrl_write_address;
+  wire dc_ctrl_reload;
+  wire [1:0] dc_ctrl_choice;
 
   genvar i;
 
@@ -252,12 +267,14 @@ module core0(
     .insert({
       cstack_insert_progaddr,
       cstack_insert_dcs,
+      cstack_insert_dc_directions,
       cstack_insert_dc_modifies,
       cstack_insert_interrupt
     }),
     .tops({
       cstack_top_progaddr,
       cstack_top_dcs,
+      cstack_top_dc_directions,
       cstack_top_dc_modifies,
       cstack_top_interrupt
     })
@@ -282,6 +299,22 @@ module core0(
     .lines(masked_sends),
     .out(chosen_send_bus),
     .on(chosen_send_on)
+  );
+
+  dc_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH)) dc_control(
+    .instruction,
+    .jump_immediate,
+    .top(dstack_top[MAIN_ADDR_WIDTH-1:0]),
+    .dcs,
+    .dc_directions,
+    .dc_modifies,
+    .dc_nexts(dc_ctrl_nexts),
+    .dc_next_directions(dc_ctrl_next_directions),
+    .dc_next_modifies(dc_ctrl_next_modifies),
+    .write_out(dc_ctrl_write),
+    .write_address(dc_ctrl_write_address),
+    .reload(dc_ctrl_reload),
+    .choice(dc_ctrl_choice)
   );
 
   jump_immediate_control #(.WORD_WIDTH(WORD_WIDTH)) jump_immediate_control(
@@ -314,8 +347,8 @@ module core0(
       dcs <= 0;
       dc_vals <= 0;
       dc_directions <= 0;
-      dc_modifications <= 0;
-      dc_advance <= 0;
+      dc_modifies <= 0;
+      dc_reload <= 0;
       conveyors <= 0;
       conveyor_heads <= 0;
 
@@ -333,6 +366,12 @@ module core0(
       lstack_ending <= ~0;
     end else begin
       pc <= pc_next;
+      dc_mutate <= dc_ctrl_choice;
+      dcs <= dc_ctrl_nexts;
+      dc_directions <= dc_ctrl_next_directions;
+      dc_modifies <= dc_ctrl_next_modifies;
+      dc_reload <= dc_ctrl_reload;
+      dc_mutate <= dc_ctrl_choice;
     end
   end
 endmodule
