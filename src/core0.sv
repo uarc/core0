@@ -275,6 +275,26 @@ module core0(
   // assign pc_next = jump ? jump_addr : pc + 1;
 
   always @(posedge clk) begin
+    if (reset) begin
+      pc <= 0;
+      dcs <= 0;
+      conveyors <= 0;
+      conveyor_heads <= 0;
 
+      carry <= 0;
+      overflow <= 0;
+      interrupt <= 0;
+      interrupt_active <= 0;
+      bus_selections <= 0;
+      interrupt_enables <= 0;
+
+      // Initialize the lstack so it would effectively loop over the entire program infinitely
+      lstack_index <= 0;
+      lstack_total <= ~0;
+      lstack_beginning <= 0;
+      lstack_ending <= ~0;
+    end else begin
+      pc <= pc_next;
+    end
   end
 endmodule
