@@ -222,6 +222,9 @@ module core0(
   reg [WORD_WIDTH-1:0] lstack_total;
   reg [PROGRAM_ADDR_WIDTH-1:0] lstack_beginning;
   reg [PROGRAM_ADDR_WIDTH-1:0] lstack_ending;
+  wire [PROGRAM_ADDR_WIDTH-1:0] lstack_after_ending;
+  wire [WORD_WIDTH-1:0] lstack_index_advance;
+  wire lstack_next_iter;
 
   // Signals for the interrupt chooser
   wire [TOTAL_BUSES-1:0] masked_sends;
@@ -284,7 +287,9 @@ module core0(
 
   // Assign signals for cstack
   assign cstack_insert_progaddr =
-    chosen_send_on ? (jump_immediate ? dc_vals[0] : jump_stack ? dstack_top : pc_advance) : pc_advance;
+    chosen_send_on ?
+      (jump_immediate ? dc_vals[0] : jump_stack ? dstack_top : lstack_pop ? lstack_after_ending : pc_advance) :
+      pc_advance;
   assign cstack_insert_dcs = dc_ctrl_nexts;
   assign cstack_insert_dc_directions = dc_ctrl_next_directions;
   assign cstack_insert_dc_modifies = dc_ctrl_next_modifies;
@@ -297,6 +302,13 @@ module core0(
     .insert(lstack_insert),
     .tops(lstack_tops)
   );
+
+  // Assign signals for lstack
+  assign lstack_push = !lstack_pop && (instruction == `I_LOOPI || instruction == `I_LOOP);
+  assign lstack_pop = instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter);
+  assign lstack_after_ending = lstack_ending + 1;
+  assign lstack_index_advance = lstack_index + 1;
+  assign lstack_next_iter = instruction == `I_CONTINUE || pc == lstack_ending;
 
   generate
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
@@ -347,6 +359,7 @@ module core0(
     chosen_send_on ? chosen_interrupt_address :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
+    lstack_pop ? lstack_after_ending :
     pc_advance;
 
   assign interrupt_wait = instruction == `I_WAIT;

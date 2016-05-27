@@ -13,11 +13,11 @@
 `define I_CARRY 8'h0A
 `define I_BORROW 8'h0B
 `define I_INV 8'h0C
-`define I_FLUSH 8'h0D
+`define I_BREAK 8'h0D
 `define I_READS 8'h0E
 `define I_RET 8'h0F
-`define I_IEN 8'h10
-`define I_IDI 8'h11
+`define I_CONTINUE 8'h10
+`define I_IEN 8'h11
 `define I_RECV 8'h12
 `define I_IN 8'h13
 `define I_KILL 8'h14

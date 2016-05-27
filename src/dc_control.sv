@@ -114,6 +114,16 @@ module dc_control(
         write_out = 0;
         write_address = {MAIN_ADDR_WIDTH{1'bx}};
       end
+      `I_LOOPI: begin
+        choice = 0;
+        dc_next_directions = dc_directions;
+        dc_next_modifies = dc_modifies;
+        dc_nexts[0] = dc_read_advances[0];
+        dc_nexts[3:1] = dcs[3:1];
+        reload = 1;
+        write_out = 0;
+        write_address = {MAIN_ADDR_WIDTH{1'bx}};
+      end
       default: begin
         if (jump_immediate) begin
           choice = 0;
