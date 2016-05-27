@@ -2,6 +2,7 @@
 `include "../src/stack.sv"
 `include "../src/priority_encoder.sv"
 `include "../src/alu.sv"
+`include "../src/alu_control.sv"
 `include "../src/instructions.sv"
 `include "../src/jump_immediate_control.sv"
 `include "../src/dc_control.sv"
@@ -252,6 +253,18 @@ module core0(
     .out(alu_out),
     .oc(alu_oc),
     .oo(alu_oo)
+  );
+
+  assign alu_b = dstack_top;
+
+  alu_control #(.WORD_WIDTH(WORD_WIDTH)) alu_control(
+    .instruction,
+    .second(dstack_second),
+    .carry,
+    .dc_vals,
+    .alu_a,
+    .alu_ic,
+    .alu_opcode
   );
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
