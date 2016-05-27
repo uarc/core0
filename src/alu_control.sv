@@ -5,6 +5,7 @@ module alu_control(
   instruction,
   second,
   carry,
+  dcs,
   dc_vals,
 
   alu_a,
@@ -19,6 +20,7 @@ module alu_control(
   input [7:0] instruction;
   input [WORD_WIDTH-1:0] second;
   input carry;
+  input [3:0][WORD_WIDTH-1:0] dcs;
   input [3:0][WORD_WIDTH-1:0] dc_vals;
 
   output reg [WORD_WIDTH-1:0] alu_a;
@@ -28,6 +30,13 @@ module alu_control(
 
   always @* begin
     casez (instruction)
+      `I_RREADZ: begin
+        alu_a = dcs[instruction[1:0]];
+        alu_ic = 0;
+        alu_opcode = `OP_ADD;
+        store_carry = 0;
+        store_overflow = 0;
+      end
       `I_ADDZ: begin
         alu_a = dc_vals[instruction[1:0]];
         alu_ic = 0;
@@ -144,6 +153,13 @@ module alu_control(
         alu_a = second;
         alu_ic = 1'bx;
         alu_opcode = `OP_XOR;
+        store_carry = 0;
+        store_overflow = 0;
+      end
+      `I_RWRITEZ: begin
+        alu_a = dcs[instruction[1:0]];
+        alu_ic = 0;
+        alu_opcode = `OP_ADD;
         store_carry = 0;
         store_overflow = 0;
       end

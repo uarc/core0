@@ -5,7 +5,7 @@
 `include "../src/alu_control.sv"
 `include "../src/instructions.sv"
 `include "../src/jump_immediate_control.sv"
-`include "../src/dc_control.sv"
+`include "../src/mem_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -172,6 +172,8 @@ module core0(
   wire call;
   // This is asserted whenever the PC is going to jump/move
   wire jump;
+  // This tells the processor not to respond to any interrupts or advance the PC
+  wire halt;
 
   // Signals for the alu
   wire [WORD_WIDTH-1:0] alu_a;
@@ -237,14 +239,17 @@ module core0(
   wire interrupt_wait;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
 
-  // Signals for dc_control
+  // Signals for mem_control
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_ctrl_nexts;
   wire [3:0] dc_ctrl_next_directions;
   wire [3:0] dc_ctrl_next_modifies;
-  wire dc_ctrl_write;
-  wire [MAIN_ADDR_WIDTH-1:0] dc_ctrl_write_address;
   wire dc_ctrl_reload;
   wire [1:0] dc_ctrl_choice;
+  wire mem_ctrl_write;
+  wire [MAIN_ADDR_WIDTH-1:0] mem_ctrl_write_address;
+  wire [MAIN_ADDR_WIDTH-1:0] mem_ctrl_read_address;
+  wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload;
+  reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last;
 
   genvar i;
 
@@ -264,6 +269,8 @@ module core0(
     .instruction,
     .second(dstack_second),
     .carry,
+    // Pad each DC individually with 0s so they can be added in the ALU
+    .dcs({dcs[3][WORD_WIDTH-1:0], dcs[2][WORD_WIDTH-1:0], dcs[1][WORD_WIDTH-1:0], dcs[0][WORD_WIDTH-1:0]}),
     .dc_vals,
     .alu_a,
     .alu_ic,
@@ -341,18 +348,23 @@ module core0(
     .on(chosen_send_on)
   );
 
-  dc_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH)) dc_control(
+  mem_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH), .WORD_WIDTH(WORD_WIDTH)) mem_control(
     .instruction,
     .jump_immediate,
-    .top(dstack_top[MAIN_ADDR_WIDTH-1:0]),
+    .top(dstack_top),
+    .second(dstack_second),
+    .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
     .dcs,
     .dc_directions,
     .dc_modifies,
     .dc_nexts(dc_ctrl_nexts),
     .dc_next_directions(dc_ctrl_next_directions),
     .dc_next_modifies(dc_ctrl_next_modifies),
-    .write_out(dc_ctrl_write),
-    .write_address(dc_ctrl_write_address),
+    .write_out(mem_ctrl_write),
+    .write_address(mem_ctrl_write_address),
+    .read_address(mem_ctrl_read_address),
+    .conveyor_memload(mem_ctrl_conveyor_memload),
+    .dstack_memload(mem_ctrl_dstack_memload),
     .reload(dc_ctrl_reload),
     .choice(dc_ctrl_choice)
   );
@@ -374,6 +386,7 @@ module core0(
 
   assign pc_advance = pc + 1;
   assign pc_next =
+    halt ? pc :
     chosen_send_on ? chosen_interrupt_address :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
@@ -382,6 +395,8 @@ module core0(
 
   assign interrupt_wait = instruction == `I_WAIT;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
+
+  assign halt = (interrupt_wait && !chosen_send_on) || mem_ctrl_conveyor_memload || mem_ctrl_dstack_memload;
 
   always @(posedge clk) begin
     if (reset) begin
@@ -406,6 +421,8 @@ module core0(
       lstack_total <= ~0;
       lstack_beginning <= 0;
       lstack_ending <= ~0;
+      mem_ctrl_conveyor_memload_last <= 0;
+      mem_ctrl_dstack_memload_last <= 0;
     end else begin
       pc <= pc_next;
       dc_mutate <= dc_ctrl_choice;
@@ -414,6 +431,8 @@ module core0(
       dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
+      mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
+      mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
       if (alu_cntl_store_carry)
         carry <= alu_oc;
       if (alu_cntl_store_overflow)
