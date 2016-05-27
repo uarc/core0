@@ -182,6 +182,9 @@ module core0(
   wire alu_oc;
   wire alu_oo;
 
+  // Signals for alu_control
+  wire alu_cntl_store_carry, alu_cntl_store_overflow;
+
   // Signals for the dstack
   wire [1:0] dstack_movement;
   wire [WORD_WIDTH-1:0] dstack_next_top;
@@ -264,7 +267,9 @@ module core0(
     .dc_vals,
     .alu_a,
     .alu_ic,
-    .alu_opcode
+    .alu_opcode,
+    .store_carry(alu_cntl_store_carry),
+    .store_overflow(alu_cntl_store_overflow)
   );
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
@@ -409,6 +414,10 @@ module core0(
       dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
+      if (alu_cntl_store_carry)
+        carry <= alu_oc;
+      if (alu_cntl_store_overflow)
+        overflow <= alu_oo;
     end
   end
 endmodule
