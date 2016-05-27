@@ -177,7 +177,7 @@ module core0(
   wire [WORD_WIDTH-1:0] alu_a;
   wire [WORD_WIDTH-1:0] alu_b;
   wire alu_ic;
-  wire [2:0] alu_opcode;
+  wire [3:0] alu_opcode;
   wire [WORD_WIDTH-1:0] alu_out;
   wire alu_oc;
   wire alu_oo;

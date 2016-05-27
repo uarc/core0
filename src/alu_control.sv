@@ -23,7 +23,7 @@ module alu_control(
 
   output reg [WORD_WIDTH-1:0] alu_a;
   output reg alu_ic;
-  output reg [2:0] alu_opcode;
+  output reg [3:0] alu_opcode;
   output reg store_carry, store_overflow;
 
   always @* begin
@@ -140,11 +140,17 @@ module alu_control(
         store_carry = 0;
         store_overflow = 0;
       end
-      // Make the default case OR so less stuff switches around consuming power
+      `I_XOR: begin
+        alu_a = second;
+        alu_ic = 1'bx;
+        alu_opcode = `OP_XOR;
+        store_carry = 0;
+        store_overflow = 0;
+      end
       default: begin
         alu_a = {WORD_WIDTH{1'bx}};
         alu_ic = 1'bx;
-        alu_opcode = `OP_OR;
+        alu_opcode = `OP_NOP;
         store_carry = 0;
         store_overflow = 0;
       end

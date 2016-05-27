@@ -20,7 +20,7 @@ module alu(
   /// Input carry bit
   input ic;
   /// Opcode which determines the operation
-  input [2:0] opcode;
+  input [3:0] opcode;
   /// Primary output of the operation
   output reg [WIDTH-1:0] out;
   /// Output carry bit
@@ -69,9 +69,19 @@ module alu(
         oc = 1'bx;
         oo = 1'bx;
       end
+      `OP_XOR: begin
+        out = a ^ b;
+        oc = 1'bx;
+        oo = 1'bx;
+      end
       `OP_ADD: begin
         {oc, out} = sum;
         oo = a[WIDTH-1] == b[WIDTH-1] && sum[WIDTH-1] != a[WIDTH-1];
+      end
+      default: begin
+        out = {WIDTH{1'bx}};
+        oc = 1'bx;
+        oo = 1'bx;
       end
     endcase
   end
