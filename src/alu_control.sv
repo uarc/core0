@@ -72,6 +72,13 @@ module alu_control(
         store_carry = 1;
         store_overflow = 1;
       end
+      `I_INV: begin
+        alu_a = -1;
+        alu_ic = 0;
+        alu_opcode = `OP_XOR;
+        store_carry = 0;
+        store_overflow = 0;
+      end
       `I_ADD: begin
         alu_a = second;
         alu_ic = 0;

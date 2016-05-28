@@ -126,3 +126,5 @@
 `define I_MULU 8'h74
 `define I_DIV 8'h75
 `define I_DIVU 8'h76
+`define I_ROTZ 8'b10ZZZZZZ
+`define I_COPYZ 8'b11ZZZZZZ

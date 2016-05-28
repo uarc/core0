@@ -6,6 +6,7 @@
 `include "../src/instructions.sv"
 `include "../src/jump_immediate_control.sv"
 `include "../src/mem_control.sv"
+`include "../src/faults.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -73,6 +74,9 @@ module core0(
   /// This is how many loops can be nested with the lstack
   parameter LSTACK_DEPTH = 3;
 
+  localparam FAULT_ADDR_WIDTH = 2;
+  localparam TOTAL_FAULTS = 4;
+
   input clk;
   input reset;
 
@@ -138,14 +142,16 @@ module core0(
   // Which DC to mutate on the cycle following a DC movement where dc_advance is set
   reg [1:0] dc_mutate;
 
+  parameter CONVEYOR_ADDR_WIDTH = 4;
+  localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   // The first bit indicates if the word is finished/complete
-  localparam CONVERYOR_WIDTH = 1 + WORD_WIDTH;
+  localparam CONVERYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
 
   // Conveyors (0 is normal operation and 1 is for interrupts)
   // Note: There must also be two sets of pipelined modules for normal and interrupt mode
-  reg [1:0][15:0][CONVERYOR_WIDTH-1:0] conveyors;
+  reg [1:0][CONVEYOR_SIZE-1:0][CONVERYOR_WIDTH-1:0] conveyors;
   // The head address of the conveyor (it only decrements)
-  reg [1:0][3:0] conveyor_heads;
+  reg [1:0][CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads;
 
   // Status bits
   reg carry;
