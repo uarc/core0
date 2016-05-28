@@ -2,6 +2,7 @@
 
 module dstack_control(
   instruction,
+  halt,
   dcs,
   dc_vals,
   iterators,
@@ -16,24 +17,53 @@ module dstack_control(
   receiver_self_permissions,
   receiver_self_addresses,
   conveyor_value,
+  rotate_value,
   movement,
   next_top,
+  rotate,
+  rotate_addr,
 );
   parameter WORD_WIDTH = 32;
   parameter TOTAL_BUSES = 1;
 
   input [7:0] instruction;
+  input halt;
   input [3:0][WORD_WIDTH-1:0] dcs, dc_vals, iterators;
   input [WORD_WIDTH-1:0] top, second, third, alu_out, mem_in;
   input memload_last;
   input [WORD_WIDTH-1:0] self_perimission, self_address;
   input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_permissions, receiver_self_addresses;
-  input [WORD_WIDTH-1:0] conveyor_value;
+  input [WORD_WIDTH-1:0] conveyor_value, rotate_value;
   output reg [1:0] movement;
   output reg [WORD_WIDTH-1:0] next_top;
+  output reg rotate;
+  output reg [5:0] rotate_addr;
 
   always @* begin
-    movement = instruction[6:5];
+    if (halt) begin
+      movement = 2'b00;
+      rotate = 0;
+      rotate_addr = 5'bx;
+    end else begin
+      if (instruction[7] == 1'b1) begin
+        // rotate
+        if (instruction[6] == 1'b1) begin
+          movement = 2'b00;
+          rotate = 1;
+          rotate_addr = instruction[5:0];
+        // copy
+        end else begin
+          movement = 2'b01;
+          rotate = 0;
+          rotate_addr = 5'bx;
+        end
+      end else begin
+        movement = instruction[6:5];
+        rotate = 0;
+        rotate_addr = 5'bx;
+      end
+    end
+
     casez (instruction)
       `I_RREADZ: next_top = mem_in;
       `I_ADDZ: next_top = alu_out;
@@ -111,6 +141,7 @@ module dstack_control(
       `I_MULU: next_top = third;
       `I_DIV: next_top = third;
       `I_DIVU: next_top = third;
+      `I_ROTZ: next_top = rotate_value;
       default: next_top = {WORD_WIDTH{1'bx}};
     endcase
   end
