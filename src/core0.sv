@@ -145,11 +145,11 @@ module core0(
   parameter CONVEYOR_ADDR_WIDTH = 4;
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   // The first bit indicates if the word is finished/complete
-  localparam CONVERYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
+  localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
 
   // Conveyors (0 is normal operation and 1 is for interrupts)
   // Note: There must also be two sets of pipelined modules for normal and interrupt mode
-  reg [1:0][CONVEYOR_SIZE-1:0][CONVERYOR_WIDTH-1:0] conveyors;
+  reg [1:0][CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors;
   // The head address of the conveyor (it only decrements)
   reg [1:0][CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads;
 
@@ -242,7 +242,7 @@ module core0(
   wire [TOTAL_BUSES-1:0] masked_sends;
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
-  wire interrupt_wait;
+  wire interrupt_recv;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
 
   // Signals for mem_control
@@ -324,7 +324,7 @@ module core0(
   assign cstack_insert_dcs = dc_ctrl_nexts;
   assign cstack_insert_dc_directions = dc_ctrl_next_directions;
   assign cstack_insert_dc_modifies = dc_ctrl_next_modifies;
-  assign cstack_insert_interrupt = chosen_send_on && !interrupt_wait;
+  assign cstack_insert_interrupt = chosen_send_on && !interrupt_recv;
 
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
     .clk,
@@ -343,7 +343,7 @@ module core0(
 
   generate
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
-      assign masked_sends[i] = interrupt_wait ? (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
+      assign masked_sends[i] = interrupt_recv ? (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
         (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH]);
     end
   endgenerate
@@ -399,10 +399,13 @@ module core0(
     lstack_pop ? lstack_after_ending :
     pc_advance;
 
-  assign interrupt_wait = instruction == `I_WAIT;
+  assign interrupt_recv = instruction == `I_RECV;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
 
-  assign halt = (interrupt_wait && !chosen_send_on) || mem_ctrl_conveyor_memload || mem_ctrl_dstack_memload;
+  assign halt =
+    ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
+    mem_ctrl_conveyor_memload ||
+    mem_ctrl_dstack_memload;
 
   always @(posedge clk) begin
     if (reset) begin
