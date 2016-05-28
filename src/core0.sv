@@ -74,7 +74,7 @@ module core0(
   /// This is how many loops can be nested with the lstack
   parameter LSTACK_DEPTH = 3;
 
-  localparam FAULT_ADDR_WIDTH = 2;
+  localparam FAULT_ADDR_WIDTH = 3;
   localparam TOTAL_FAULTS = 4;
 
   input clk;
@@ -170,12 +170,16 @@ module core0(
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
   // The next PC and the address from memory the next instruction will be loaded from
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
+  // The next PC assuming no interrupt
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_nointerrupt;
   // This is asserted when an immediate jump is to happen
   wire jump_immediate;
   // This is asserted when a stack jump is to happen
   wire jump_stack;
-  // This is asserted whenever the call stack is going to be pushed
+  // This is asserted whenever the status normally indicates a call
   wire call;
+  // This is asserted whenever we are returning from a call
+  wire returning;
   // This is asserted whenever the PC is going to jump/move
   wire jump;
   // This tells the processor not to respond to any interrupts or advance the PC
@@ -242,6 +246,8 @@ module core0(
   wire [TOTAL_BUSES-1:0] masked_sends;
   wire [WORD_WIDTH-1:0] chosen_send_bus;
   wire chosen_send_on;
+  // Handle actual interrupt (not recv)
+  wire handle_interrupt;
   wire interrupt_recv;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
 
@@ -317,14 +323,13 @@ module core0(
   );
 
   // Assign signals for cstack
-  assign cstack_insert_progaddr =
-    chosen_send_on ?
-      (jump_immediate ? dc_vals[0] : jump_stack ? dstack_top : lstack_pop ? lstack_after_ending : pc_advance) :
-      pc_advance;
+  assign cstack_push = !halt && call;
+  assign cstack_pop = !halt && returning;
+  assign cstack_insert_progaddr = pc_next_nointerrupt;
   assign cstack_insert_dcs = dc_ctrl_nexts;
   assign cstack_insert_dc_directions = dc_ctrl_next_directions;
   assign cstack_insert_dc_modifies = dc_ctrl_next_modifies;
-  assign cstack_insert_interrupt = chosen_send_on && !interrupt_recv;
+  assign cstack_insert_interrupt = handle_interrupt;
 
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
     .clk,
@@ -336,7 +341,7 @@ module core0(
 
   // Assign signals for lstack
   assign lstack_push = !lstack_pop && (instruction == `I_LOOPI || instruction == `I_LOOP);
-  assign lstack_pop = instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter);
+  assign lstack_pop = !halt && (instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_after_ending = lstack_ending + 1;
   assign lstack_index_advance = lstack_index + 1;
   assign lstack_next_iter = instruction == `I_CONTINUE || pc == lstack_ending;
@@ -386,19 +391,21 @@ module core0(
   );
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
-  assign call = instruction == `I_CALLI || instruction == `I_CALL;
+  assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt;
+  assign returning = instruction == `I_RET;
 
   assign instruction = programmem_read_value;
 
   assign pc_advance = pc + 1;
-  assign pc_next =
-    halt ? pc :
-    chosen_send_on ? chosen_interrupt_address :
+  assign pc_next_nointerrupt =
+    cstack_pop ? cstack_top_progaddr :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_after_ending :
     pc_advance;
+  assign pc_next = halt ? pc : handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
 
+  assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
   assign interrupt_recv = instruction == `I_RECV;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
 
@@ -442,6 +449,21 @@ module core0(
       dc_mutate <= dc_ctrl_choice;
       mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
       mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
+      if (cstack_push) begin
+        if (cstack_insert_interrupt)
+          interrupt_active <= 1'b1;
+      end
+      if (cstack_pop) begin
+        if (cstack_top_interrupt)
+          interrupt_active <= 1'b0;
+        for (int i = 0; i < 4; i++) begin
+          if (!dc_modifies[i]) begin
+            dcs[i] <= cstack_top_dcs[i];
+            dc_modifies[i] <= cstack_top_dc_modifies[i];
+            dc_directions[i] <= cstack_top_dc_directions[i];
+          end
+        end
+      end
       if (alu_cntl_store_carry)
         carry <= alu_oc;
       if (alu_cntl_store_overflow)

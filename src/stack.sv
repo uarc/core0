@@ -1,5 +1,6 @@
 `include "../src/stack_element.sv"
 
+/// This module replaces the top element if push and pop are asserted
 module stack(
   clk,
   push,
@@ -20,6 +21,11 @@ module stack(
 
   wire [DEPTH-1:0][WIDTH-1:0] data;
 
+  wire actual_push, actual_pop;
+
+  assign actual_push = push && !pop;
+  assign actual_pop = pop && !push;
+
   genvar i;
 
   generate
@@ -32,8 +38,8 @@ module stack(
     for (i = 1; i < DEPTH-1; i = i + 1) begin : STACK_ELEMENT_LOOP
       stack_element #(.WIDTH(WIDTH)) stack_element(
         .clk,
-        .push,
-        .pop,
+        .push(actual_push),
+        .pop(actual_pop),
         .above(data[i-1]),
         .below(data[i+1]),
         .out(data[i])
@@ -43,8 +49,9 @@ module stack(
 
   stack_element #(.WIDTH(WIDTH)) top_element(
     .clk,
-    .push,
-    .pop,
+    // Allow top element to be modified if there is a push and pop
+    .push(push),
+    .pop(actual_pop),
     .above(insert),
     .below(data[1]),
     .out(data[0])
@@ -52,8 +59,8 @@ module stack(
 
   stack_element #(.WIDTH(WIDTH)) bottom_element(
     .clk,
-    .push,
-    .pop,
+    .push(actual_push),
+    .pop(actual_pop),
     .above(data[DEPTH-2]),
     .below({WIDTH{1'bx}}),
     .out(data[DEPTH-1])
