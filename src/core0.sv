@@ -147,11 +147,10 @@ module core0(
   // The first bit indicates if the word is finished/complete
   localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
 
-  // Conveyors (0 is normal operation and 1 is for interrupts)
-  // Note: There must also be two sets of pipelined modules for normal and interrupt mode
-  reg [1:0][CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors;
+  // Conveyor (0 is normal operation and 1 is for interrupts)
+  wire [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyor;
   // The head address of the conveyor (it only decrements)
-  reg [1:0][CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads;
+  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head;
 
   // Status bits
   reg carry;
@@ -422,8 +421,6 @@ module core0(
       dc_directions <= 0;
       dc_modifies <= 0;
       dc_reload <= 0;
-      conveyors <= 0;
-      conveyor_heads <= 0;
 
       carry <= 0;
       overflow <= 0;
