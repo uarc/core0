@@ -9,6 +9,8 @@ module conveyor_control(
   servicing_interrupt,
   interrupt_bus,
   interrupt_value,
+  load_last,
+  mem_in,
   conveyor_value,
   conveyor_back1,
   conveyor_back2,
@@ -28,6 +30,8 @@ module conveyor_control(
   input servicing_interrupt;
   input [WORD_WIDTH-1:0] interrupt_bus;
   input [WORD_WIDTH-1:0] interrupt_value;
+  input load_last;
+  input [WORD_WIDTH-1:0] mem_in;
   // The output of the value at the conveyor_access location
   output [WORD_WIDTH-1:0] conveyor_value;
   // The back addresses get used in pipelines and other modules to add stuff to the conveyor
@@ -74,12 +78,18 @@ module conveyor_control(
     if (reset) begin
       conveyors <= 0;
       conveyor_heads <= 0;
-    end else begin
-      if (servicing_interrupt) begin
-        conveyors[0][conveyor_back1] <= {1'b1, `F_NONE, interrupt_value};
-        conveyors[0][conveyor_back2] <= {1'b1, `F_NONE, interrupt_bus};
-        conveyor_heads[0] <= conveyor_back2;
+    end else if (load_last) begin
+      if (interrupt_active) begin
+        conveyors[1][conveyor_back1] <= {1'b1, `F_NONE, mem_in};
+        conveyor_heads[1] <= conveyor_back1;
+      end else begin
+        conveyors[0][conveyor_back1] <= {1'b1, `F_NONE, mem_in};
+        conveyor_heads[0] <= conveyor_back1;
       end
+    end else if (servicing_interrupt) begin
+      conveyors[0][conveyor_back1] <= {1'b1, `F_NONE, interrupt_value};
+      conveyors[0][conveyor_back2] <= {1'b1, `F_NONE, interrupt_bus};
+      conveyor_heads[0] <= conveyor_back2;
     end
   end
 endmodule

@@ -77,7 +77,7 @@ module mem_control(
         write_value = {WORD_WIDTH{1'bx}};
         read_address = alu_out;
         conveyor_memload = 0;
-        dstack_memload = 1 && !dstack_memload_last;
+        dstack_memload = !dstack_memload_last;
       end
       `I_ADDZ: begin
         choice = instruction[1:0];
@@ -108,7 +108,7 @@ module mem_control(
         write_value = {WORD_WIDTH{1'bx}};
         read_address = top;
         conveyor_memload = 0;
-        dstack_memload = 1 && !dstack_memload_last;
+        dstack_memload = !dstack_memload_last;
       end
       `I_READZ: begin
         choice = instruction[1:0];

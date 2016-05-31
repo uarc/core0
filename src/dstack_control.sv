@@ -11,7 +11,6 @@ module dstack_control(
   third,
   alu_out,
   mem_in,
-  memload_last,
   self_perimission,
   self_address,
   receiver_self_permissions,
@@ -30,7 +29,6 @@ module dstack_control(
   input halt;
   input [3:0][WORD_WIDTH-1:0] dcs, dc_vals, iterators;
   input [WORD_WIDTH-1:0] top, second, third, alu_out, mem_in;
-  input memload_last;
   input [WORD_WIDTH-1:0] self_perimission, self_address;
   input [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_permissions, receiver_self_addresses;
   input [WORD_WIDTH-1:0] conveyor_value, rotate_value;

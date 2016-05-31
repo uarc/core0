@@ -8,6 +8,7 @@
 `include "../src/mem_control.sv"
 `include "../src/faults.sv"
 `include "../src/conveyor_control.sv"
+`include "../src/dstack_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -150,6 +151,9 @@ module core0(
   reg overflow;
   reg interrupt;
   reg interrupt_active;
+
+  // UARC address and permission
+  reg [WORD_WIDTH-1:0] permission, address;
 
   // UARC bus control bits
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
@@ -409,11 +413,36 @@ module core0(
     .servicing_interrupt,
     .interrupt_bus(chosen_send_bus),
     .interrupt_value(chosen_interrupt_value),
+    .load_last(mem_ctrl_conveyor_memload_last),
+    .mem_in(mainmem_read_value),
     .conveyor_value,
     .conveyor_back1,
     .conveyor_back2,
     .halt(conveyor_halt),
     .fault(conveyor_fault)
+  );
+
+  dstack_control #(.WORD_WIDTH(WORD_WIDTH), .TOTAL_BUSES(TOTAL_BUSES)) dstack_control (
+    .instruction,
+    .halt,
+    .dcs({dcs[3][WORD_WIDTH-1:0], dcs[2][WORD_WIDTH-1:0], dcs[1][WORD_WIDTH-1:0], dcs[0][WORD_WIDTH-1:0]}),
+    .dc_vals,
+    .iterators,
+    .top(dstack_top),
+    .second(dstack_second),
+    .third(dstack_third),
+    .alu_out,
+    .mem_in(mainmem_read_value),
+    .self_perimission(permission),
+    .self_address(address),
+    .receiver_self_permissions,
+    .receiver_self_addresses,
+    .conveyor_value,
+    .rotate_value(dstack_rot_val),
+    .movement(dstack_movement),
+    .next_top(dstack_next_top),
+    .rotate(dstack_rotate),
+    .rotate_addr(dstack_rot_addr)
   );
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
@@ -475,11 +504,15 @@ module core0(
       dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
-      mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
-      mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
-      if (cstack_push) begin
-        if (cstack_insert_interrupt)
-          interrupt_active <= 1'b1;
+      if (handle_interrupt) begin
+        interrupt_active <= 1'b1;
+        // Clear these so they get reloaded again when we return from the interrupt
+        // This only matters if they would have otherwise been set to 1
+        mem_ctrl_conveyor_memload_last <= 1'b0;
+        mem_ctrl_dstack_memload_last <= 1'b0;
+      end else begin
+        mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
+        mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
       end
       if (cstack_pop) begin
         if (cstack_top_interrupt)
