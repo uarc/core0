@@ -13,7 +13,7 @@ module alu_control(
   alu_opcode,
 
   store_carry,
-  store_overflow,
+  store_overflow
 );
   parameter WORD_WIDTH = 32;
 

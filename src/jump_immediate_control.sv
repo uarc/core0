@@ -7,7 +7,7 @@ module jump_immediate_control(
   carry,
   overflow,
   interrupt,
-  jump_immediate,
+  jump_immediate
 );
   parameter WORD_WIDTH = 32;
 

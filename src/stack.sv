@@ -6,7 +6,7 @@ module stack(
   push,
   pop,
   insert,
-  tops,
+  tops
 );
   parameter WIDTH = 32;
   /// Depth cannot be less than 2

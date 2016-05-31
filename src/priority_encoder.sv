@@ -1,7 +1,7 @@
 module priority_encoder(
 	lines,
 	out,
-	on,
+	on
 );
 	/// The width if the index address output
 	parameter OUT_WIDTH = 1;

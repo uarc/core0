@@ -4,7 +4,7 @@ module stack_element(
 	pop,
 	above,
 	below,
-	out,
+	out
 );
 	parameter WIDTH = 32;
 

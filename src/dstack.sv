@@ -10,7 +10,7 @@ module dstack(
   rot_addr,
   rot_val,
   rotate,
-  overflow,
+  overflow
 );
   /// The log2 of the depth of the stack
   parameter DEPTH_MAG = 7;
@@ -139,7 +139,7 @@ module dstack_element(
   above,
   below,
   below_twice,
-  out,
+  out
 );
   parameter WIDTH = 32;
   input clk;

@@ -20,7 +20,7 @@ module dstack_control(
   movement,
   next_top,
   rotate,
-  rotate_addr,
+  rotate_addr
 );
   parameter WORD_WIDTH = 32;
   parameter TOTAL_BUSES = 1;

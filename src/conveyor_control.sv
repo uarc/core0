@@ -15,7 +15,7 @@ module conveyor_control(
   conveyor_back1,
   conveyor_back2,
   halt,
-  fault,
+  fault
 );
   parameter WORD_WIDTH = 32;
   localparam FAULT_ADDR_WIDTH = 3;

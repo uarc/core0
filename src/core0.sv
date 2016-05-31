@@ -57,7 +57,7 @@ module core0(
   receiver_self_permissions,
   receiver_self_addresses,
   receiver_incept_permissions,
-  receiver_incept_addresses,
+  receiver_incept_addresses
 );
   /// The log2 of the word width of the core
   parameter WORD_MAG = 5;

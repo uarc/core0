@@ -7,7 +7,7 @@ module alu(
   opcode,
   out,
   oc,
-  oo,
+  oo
 );
   /// The magnitude of the width
   parameter WIDTH_MAG = 5;
