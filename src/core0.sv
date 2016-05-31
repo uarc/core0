@@ -152,6 +152,11 @@ module core0(
   reg interrupt;
   reg interrupt_active;
 
+  // Fault handlers
+  reg [TOTAL_FAULTS-1:0][MAIN_ADDR_WIDTH-1:0] fault_handlers;
+  // Determines which fault we are having (if any)
+  wire [FAULT_ADDR_WIDTH-1:0] fault;
+
   // UARC address and permission
   reg [WORD_WIDTH-1:0] permission, address;
 
@@ -160,6 +165,8 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
   wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_seti;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_set;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_sel;
 
   // The instruction being executed this cycle
   wire [7:0] instruction;
@@ -369,8 +376,12 @@ module core0(
 
       assign interrupt_addresses_seti[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
         dstack_top[PROGRAM_ADDR_WIDTH-1:0] : interrupt_addresses[i];
+
+      assign bus_selections_set[i] = (i / WORD_WIDTH == dstack_top) ? dstack_second[i % WORD_WIDTH] : 1'b0;
     end
   endgenerate
+
+  assign bus_selections_sel = bus_selections_set | bus_selections;
 
   priority_encoder #(.OUT_WIDTH(WORD_WIDTH), .LINES(TOTAL_BUSES)) chosen_send_priority_encoder(
     .lines(masked_sends),
@@ -450,14 +461,19 @@ module core0(
   );
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
-  assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt;
+  assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
   assign returning = instruction == `I_RET;
 
   assign instruction = programmem_read_value;
+  // Whatever fault we will service next instruction (none if F_NONE)
+  // TODO: Potentially add F_SEGFAULT by extending all memory addresses to word width and checking for bounds
+  // or reserve F_SEGFAULT for memory management extension
+  assign fault = dstack_overflow ? `F_DATA_STACK_OVERFLOW : conveyor_fault;
 
   assign pc_advance = pc + 1;
   assign pc_next_nointerrupt =
     halt ? pc :
+    fault != `F_NONE ? fault_handlers[fault] :
     cstack_pop ? cstack_top_progaddr :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
@@ -492,6 +508,7 @@ module core0(
       carry <= 0;
       overflow <= 0;
       interrupt <= 0;
+      fault_handlers <= 0;
       interrupt_active <= 0;
       bus_selections <= 0;
       interrupt_enables <= 0;
@@ -545,11 +562,19 @@ module core0(
       // Handle instruction specific state changes
       casez (instruction)
         `I_ISET: interrupt_addresses <= interrupt_addresses_seti;
+        `I_SLB: bus_selections[dstack_top] <= 1'b1;
+        `I_USB: bus_selections[dstack_top] <= 1'b0;
+        `I_SET: bus_selections <= bus_selections_set;
+        `I_SEL: bus_selections <= bus_selections_sel;
         `I_LOOPI: begin
           lstack_beginning <= pc_advance;
           lstack_ending <= dc_vals[0][PROGRAM_ADDR_WIDTH-1:0];
           lstack_total <= dstack_top;
           lstack_index <= 0;
+        end
+        `I_SETA: begin
+          permission <= dstack_second;
+          address <= dstack_top;
         end
         `I_LOOP: begin
           lstack_beginning <= pc_advance;
@@ -557,6 +582,7 @@ module core0(
           lstack_total <= dstack_second;
           lstack_index <= 0;
         end
+        `I_SEF: fault_handlers[dstack_top] <= dstack_second;
         default: ;
       endcase
     end
