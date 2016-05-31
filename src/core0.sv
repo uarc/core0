@@ -7,6 +7,7 @@
 `include "../src/jump_immediate_control.sv"
 `include "../src/mem_control.sv"
 `include "../src/faults.sv"
+`include "../src/conveyor_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -73,6 +74,8 @@ module core0(
   parameter CSTACK_DEPTH = 2;
   /// This is how many loops can be nested with the lstack
   parameter LSTACK_DEPTH = 3;
+  /// Increasing this by 1 doubles the length of the conveyor buffer
+  parameter CONVEYOR_ADDR_WIDTH = 4;
 
   localparam FAULT_ADDR_WIDTH = 3;
   localparam TOTAL_FAULTS = 4;
@@ -239,7 +242,10 @@ module core0(
   // Handle actual interrupt (not recv)
   wire handle_interrupt;
   wire interrupt_recv;
+  // Any time an interrupt is being serviced at all this cycle
+  wire servicing_interrupt;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
+  wire [WORD_WIDTH-1:0] chosen_interrupt_value;
 
   // Signals for mem_control
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_ctrl_nexts;
@@ -253,14 +259,13 @@ module core0(
   wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload;
   reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last;
 
-  parameter CONVEYOR_ADDR_WIDTH = 4;
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   // The first bit indicates if the word is finished/complete
   localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
 
   // Signals for conveyor_control
   wire [WORD_WIDTH-1:0] conveyor_value;
-  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head, conveyor_back1, conveyor_back2;
+  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_back1, conveyor_back2;
   wire conveyor_halt;
   wire [FAULT_ADDR_WIDTH-1:0] conveyor_fault;
 
@@ -396,6 +401,21 @@ module core0(
     .jump_immediate
   );
 
+  conveyor_control #(.WORD_WIDTH(WORD_WIDTH), .CONVEYOR_ADDR_WIDTH(CONVEYOR_ADDR_WIDTH)) conveyor_control(
+    .clk,
+    .reset,
+    .instruction,
+    .interrupt_active,
+    .servicing_interrupt,
+    .interrupt_bus(chosen_send_bus),
+    .interrupt_value(chosen_interrupt_value),
+    .conveyor_value,
+    .conveyor_back1,
+    .conveyor_back2,
+    .halt(conveyor_halt),
+    .fault(conveyor_fault)
+  );
+
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt;
   assign returning = instruction == `I_RET;
@@ -414,7 +434,9 @@ module core0(
 
   assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
   assign interrupt_recv = instruction == `I_RECV;
+  assign servicing_interrupt = chosen_send_on && !interrupt_active;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
+  assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
 
   assign halt =
     ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||

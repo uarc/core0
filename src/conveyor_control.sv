@@ -9,9 +9,7 @@ module conveyor_control(
   servicing_interrupt,
   interrupt_bus,
   interrupt_value,
-  conveyor_access,
   conveyor_value,
-  conveyor_head,
   conveyor_back1,
   conveyor_back2,
   halt,
@@ -23,20 +21,15 @@ module conveyor_control(
   parameter CONVEYOR_ADDR_WIDTH = 4;
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
-  parameter INTERRUPT_ADDR_WIDTH = 1;
 
   input clk, reset;
   input [7:0] instruction;
   input interrupt_active;
   input servicing_interrupt;
-  input [INTERRUPT_ADDR_WIDTH-1:0] interrupt_bus;
+  input [WORD_WIDTH-1:0] interrupt_bus;
   input [WORD_WIDTH-1:0] interrupt_value;
-  // The ALU is used to produce an access location in cv# instructions
-  input [CONVEYOR_ADDR_WIDTH-1:0] conveyor_access;
   // The output of the value at the conveyor_access location
   output [WORD_WIDTH-1:0] conveyor_value;
-  // The head address is used to compute conveyor_access in the ALU
-  output [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head;
   // The back addresses get used in pipelines and other modules to add stuff to the conveyor
   output [CONVEYOR_ADDR_WIDTH-1:0] conveyor_back1;
   output [CONVEYOR_ADDR_WIDTH-1:0] conveyor_back2;
@@ -48,11 +41,13 @@ module conveyor_control(
 
   wire [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] active_conveyor;
   wire [CONVEYOR_WIDTH-1:0] conveyor_access_slot;
+  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_access;
   wire conveyor_access_finished;
   wire [FAULT_ADDR_WIDTH-1:0] conveyor_access_fault;
 
   assign active_conveyor = conveyors[interrupt_active];
   assign conveyor_head = conveyor_heads[interrupt_active];
+  assign conveyor_access = conveyor_head + instruction[3:0];
   assign conveyor_access_slot = active_conveyor[conveyor_access];
   assign conveyor_value = conveyor_access_slot[WORD_WIDTH-1:0];
   assign conveyor_access_finished = conveyor_access_slot[CONVEYOR_WIDTH-1];
