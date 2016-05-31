@@ -142,16 +142,6 @@ module core0(
   // Which DC to mutate on the cycle following a DC movement where dc_advance is set
   reg [1:0] dc_mutate;
 
-  parameter CONVEYOR_ADDR_WIDTH = 4;
-  localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
-  // The first bit indicates if the word is finished/complete
-  localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
-
-  // Conveyor (0 is normal operation and 1 is for interrupts)
-  wire [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyor;
-  // The head address of the conveyor (it only decrements)
-  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head;
-
   // Status bits
   reg carry;
   reg overflow;
@@ -240,6 +230,7 @@ module core0(
   wire [PROGRAM_ADDR_WIDTH-1:0] lstack_after_ending;
   wire [WORD_WIDTH-1:0] lstack_index_advance;
   wire lstack_next_iter;
+  wire [3:0][WORD_WIDTH-1:0] iterators;
 
   // Signals for the interrupt chooser
   wire [TOTAL_BUSES-1:0] masked_sends;
@@ -261,6 +252,17 @@ module core0(
   wire [MAIN_ADDR_WIDTH-1:0] mem_ctrl_read_address;
   wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload;
   reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last;
+
+  parameter CONVEYOR_ADDR_WIDTH = 4;
+  localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
+  // The first bit indicates if the word is finished/complete
+  localparam CONVEYOR_WIDTH = 1 + FAULT_ADDR_WIDTH + WORD_WIDTH;
+
+  // Signals for conveyor_control
+  wire [WORD_WIDTH-1:0] conveyor_value;
+  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head, conveyor_back1, conveyor_back2;
+  wire conveyor_halt;
+  wire [FAULT_ADDR_WIDTH-1:0] conveyor_fault;
 
   genvar i;
 
@@ -322,8 +324,8 @@ module core0(
   );
 
   // Assign signals for cstack
-  assign cstack_push = !halt && call;
-  assign cstack_pop = !halt && returning;
+  assign cstack_push = call;
+  assign cstack_pop = returning;
   assign cstack_insert_progaddr = pc_next_nointerrupt;
   assign cstack_insert_dcs = dc_ctrl_nexts;
   assign cstack_insert_dc_directions = dc_ctrl_next_directions;
@@ -339,11 +341,16 @@ module core0(
   );
 
   // Assign signals for lstack
-  assign lstack_push = !lstack_pop && (instruction == `I_LOOPI || instruction == `I_LOOP);
+  assign lstack_push = instruction == `I_LOOPI || instruction == `I_LOOP;
   assign lstack_pop = !halt && (instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter));
+  assign lstack_insert = {lstack_beginning, lstack_ending, lstack_total, lstack_index};
   assign lstack_after_ending = lstack_ending + 1;
   assign lstack_index_advance = lstack_index + 1;
   assign lstack_next_iter = instruction == `I_CONTINUE || pc == lstack_ending;
+  assign iterators[0] = lstack_index;
+  assign iterators[1] = lstack_tops[0][WORD_WIDTH-1:0];
+  assign iterators[2] = lstack_tops[1][WORD_WIDTH-1:0];
+  assign iterators[3] = lstack_tops[2][WORD_WIDTH-1:0];
 
   generate
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
@@ -397,12 +404,13 @@ module core0(
 
   assign pc_advance = pc + 1;
   assign pc_next_nointerrupt =
+    halt ? pc :
     cstack_pop ? cstack_top_progaddr :
     jump_immediate ? dc_vals[0] :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_after_ending :
     pc_advance;
-  assign pc_next = halt ? pc : handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
+  assign pc_next = handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
 
   assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
   assign interrupt_recv = instruction == `I_RECV;
@@ -411,7 +419,8 @@ module core0(
   assign halt =
     ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
     mem_ctrl_conveyor_memload ||
-    mem_ctrl_dstack_memload;
+    mem_ctrl_dstack_memload ||
+    conveyor_halt;
 
   always @(posedge clk) begin
     if (reset) begin
@@ -461,10 +470,29 @@ module core0(
           end
         end
       end
+      if (lstack_pop)
+        {lstack_beginning, lstack_ending, lstack_total, lstack_index} <= lstack_tops[0];
       if (alu_cntl_store_carry)
         carry <= alu_oc;
       if (alu_cntl_store_overflow)
         overflow <= alu_oo;
+
+      // Handle instruction specific state changes
+      casez (instruction)
+        `I_LOOPI: begin
+          lstack_beginning <= pc_advance;
+          lstack_ending <= dc_vals[0][PROGRAM_ADDR_WIDTH-1:0];
+          lstack_total <= dstack_top;
+          lstack_index <= 0;
+        end
+        `I_LOOP: begin
+          lstack_beginning <= pc_advance;
+          lstack_ending <= dstack_top[PROGRAM_ADDR_WIDTH-1:0];
+          lstack_total <= dstack_second;
+          lstack_index <= 0;
+        end
+        default: ;
+      endcase
     end
   end
 endmodule
