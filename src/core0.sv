@@ -159,6 +159,7 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
+  wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_seti;
 
   // The instruction being executed this cycle
   wire [7:0] instruction;
@@ -365,6 +366,9 @@ module core0(
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
       assign masked_sends[i] = interrupt_recv ? (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
         (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH]);
+
+      assign interrupt_addresses_seti[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
+        dstack_top[PROGRAM_ADDR_WIDTH-1:0] : interrupt_addresses[i];
     end
   endgenerate
 
@@ -468,6 +472,9 @@ module core0(
   assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
 
   assign halt =
+    // Halt when we switch to an interrupt while doing an async read so it goes back to it again
+    // TODO: Handle this case explicitly to prevent the wasted cycle
+    (handle_interrupt && instruction == `I_READA) ||
     ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
     mem_ctrl_conveyor_memload ||
     mem_ctrl_dstack_memload ||
@@ -525,15 +532,19 @@ module core0(
           end
         end
       end
+      // lstack top is stored in this module so manually handle the pop case
       if (lstack_pop)
         {lstack_beginning, lstack_ending, lstack_total, lstack_index} <= lstack_tops[0];
+      // Store carry when instructions produce it
       if (alu_cntl_store_carry)
         carry <= alu_oc;
+      // Store overflow when instructions produce it
       if (alu_cntl_store_overflow)
         overflow <= alu_oo;
 
       // Handle instruction specific state changes
       casez (instruction)
+        `I_ISET: interrupt_addresses <= interrupt_addresses_seti;
         `I_LOOPI: begin
           lstack_beginning <= pc_advance;
           lstack_ending <= dc_vals[0][PROGRAM_ADDR_WIDTH-1:0];
