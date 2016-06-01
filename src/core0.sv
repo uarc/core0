@@ -44,7 +44,7 @@ module core0(
   sender_send_acks,
   sender_stream_acks,
 
-  receiver_enable,
+  receiver_enables,
   receiver_kills,
   receiver_kill_acks,
   receiver_incepts,
@@ -103,10 +103,10 @@ module core0(
   output global_send;
   output global_stream;
   output [WORD_WIDTH-1:0] global_data;
-  output [WORD_WIDTH-1:0] global_self_permission;
-  output [WORD_WIDTH-1:0] global_self_address;
-  output [WORD_WIDTH-1:0] global_incept_permission;
-  output [WORD_WIDTH-1:0] global_incept_address;
+  output reg [WORD_WIDTH-1:0] global_self_permission;
+  output reg [WORD_WIDTH-1:0] global_self_address;
+  output reg [WORD_WIDTH-1:0] global_incept_permission;
+  output reg [WORD_WIDTH-1:0] global_incept_address;
 
   // All of the signals for each bus for when this core is acting as the sender
   output [TOTAL_BUSES-1:0] sender_enables;
@@ -116,7 +116,7 @@ module core0(
   input [TOTAL_BUSES-1:0] sender_stream_acks;
 
   // All of the signals for each bus for when this core is acting as the receiver
-  input [TOTAL_BUSES-1:0] receiver_enable;
+  input [TOTAL_BUSES-1:0] receiver_enables;
   input [TOTAL_BUSES-1:0] receiver_kills;
   output [TOTAL_BUSES-1:0] receiver_kill_acks;
   input [TOTAL_BUSES-1:0] receiver_incepts;
@@ -156,9 +156,6 @@ module core0(
   reg [TOTAL_FAULTS-1:0][MAIN_ADDR_WIDTH-1:0] fault_handlers;
   // Determines which fault we are having (if any)
   wire [FAULT_ADDR_WIDTH-1:0] fault;
-
-  // UARC address and permission
-  reg [WORD_WIDTH-1:0] permission, address;
 
   // UARC bus control bits
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
@@ -265,9 +262,6 @@ module core0(
   wire [3:0] dc_ctrl_next_modifies;
   wire dc_ctrl_reload;
   wire [1:0] dc_ctrl_choice;
-  wire mem_ctrl_write;
-  wire [MAIN_ADDR_WIDTH-1:0] mem_ctrl_write_address;
-  wire [MAIN_ADDR_WIDTH-1:0] mem_ctrl_read_address;
   wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload;
   reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last;
 
@@ -310,6 +304,9 @@ module core0(
   );
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
+    .clk,
+    .reset,
+    .movement(dstack_movement),
     .next_top(dstack_next_top),
     .top(dstack_top),
     .second(dstack_second),
@@ -371,8 +368,11 @@ module core0(
 
   generate
     for (i = 0; i < TOTAL_BUSES; i = i + 1) begin : CORE0_SEND_MASK_LOOP
-      assign masked_sends[i] = interrupt_recv ? (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
-        (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH]);
+      assign masked_sends[i] = receiver_enables[i] & (
+          interrupt_recv ?
+            (receiver_sends[i] & bus_selections[i/WORD_WIDTH][i%WORD_WIDTH]) :
+            (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH])
+        );
 
       assign interrupt_addresses_seti[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
         dstack_top[PROGRAM_ADDR_WIDTH-1:0] : interrupt_addresses[i];
@@ -395,15 +395,18 @@ module core0(
     .top(dstack_top),
     .second(dstack_second),
     .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
+    .conveyor_memload_last(mem_ctrl_conveyor_memload_last),
+    .dstack_memload_last(mem_ctrl_dstack_memload_last),
     .dcs,
     .dc_directions,
     .dc_modifies,
     .dc_nexts(dc_ctrl_nexts),
     .dc_next_directions(dc_ctrl_next_directions),
     .dc_next_modifies(dc_ctrl_next_modifies),
-    .write_out(mem_ctrl_write),
-    .write_address(mem_ctrl_write_address),
-    .read_address(mem_ctrl_read_address),
+    .write_out(mainmem_we),
+    .write_address(mainmem_write_addr),
+    .write_value(mainmem_write_value),
+    .read_address(mainmem_read_addr),
     .conveyor_memload(mem_ctrl_conveyor_memload),
     .dstack_memload(mem_ctrl_dstack_memload),
     .reload(dc_ctrl_reload),
@@ -448,8 +451,8 @@ module core0(
     .third(dstack_third),
     .alu_out,
     .mem_in(mainmem_read_value),
-    .self_perimission(permission),
-    .self_address(address),
+    .self_perimission(global_self_permission),
+    .self_address(global_self_address),
     .receiver_self_permissions,
     .receiver_self_addresses,
     .conveyor_value,
@@ -459,6 +462,8 @@ module core0(
     .rotate(dstack_rotate),
     .rotate_addr(dstack_rot_addr)
   );
+
+  assign sender_enables = bus_selections;
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
@@ -480,6 +485,7 @@ module core0(
     lstack_pop ? lstack_after_ending :
     pc_advance;
   assign pc_next = handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
+  assign programmem_addr = pc_next;
 
   assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
   assign interrupt_recv = instruction == `I_RECV;
@@ -495,6 +501,21 @@ module core0(
     mem_ctrl_conveyor_memload ||
     mem_ctrl_dstack_memload ||
     conveyor_halt;
+
+  // Assign all the rest of the things statially which arent used yet
+  // TODO: Do these things properly
+  assign programmem_write_value = 8'bx;
+  assign programmem_we = 1'b0;
+
+  assign global_kill = 1'b0;
+  assign global_incept = 1'b0;
+  assign global_send = 1'b0;
+  assign global_stream = 1'b0;
+  assign global_data = {WORD_WIDTH{1'bx}};
+  assign receiver_kill_acks = {TOTAL_BUSES{1'b0}};
+  assign receiver_incept_acks = {TOTAL_BUSES{1'b0}};
+  assign receiver_send_acks = {TOTAL_BUSES{1'b0}};
+  assign receiver_stream_acks = {TOTAL_BUSES{1'b0}};
 
   always @(posedge clk) begin
     if (reset) begin
@@ -528,6 +549,8 @@ module core0(
       dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
+      if (dc_reload)
+        dc_vals[dc_mutate] <= mainmem_read_value;
       if (handle_interrupt) begin
         interrupt_active <= 1'b1;
         // Clear these so they get reloaded again when we return from the interrupt
@@ -573,8 +596,8 @@ module core0(
           lstack_index <= 0;
         end
         `I_SETA: begin
-          permission <= dstack_second;
-          address <= dstack_top;
+          global_incept_permission <= dstack_second;
+          global_incept_address <= dstack_top;
         end
         `I_LOOP: begin
           lstack_beginning <= pc_advance;

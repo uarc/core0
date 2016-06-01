@@ -35,7 +35,7 @@ module core0_base(
   parameter CONVEYOR_ADDR_WIDTH = 4;
 
   input clk, reset;
-  input [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
+  output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [7:0] programmem_read_value;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
@@ -65,7 +65,7 @@ module core0_base(
   wire [TOTAL_BUSES-1:0] sender_stream_acks;
 
   // All of the signals for each bus for when this core is acting as the receiver
-  wire [TOTAL_BUSES-1:0] receiver_enable;
+  wire [TOTAL_BUSES-1:0] receiver_enables;
   wire [TOTAL_BUSES-1:0] receiver_kills;
   wire [TOTAL_BUSES-1:0] receiver_kill_acks;
   wire [TOTAL_BUSES-1:0] receiver_incepts;
@@ -79,6 +79,22 @@ module core0_base(
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_addresses;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_permissions;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_addresses;
+
+  assign sender_kill_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_incept_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_send_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_stream_acks = {TOTAL_BUSES{1'b0}};
+
+  assign receiver_enables = {TOTAL_BUSES{1'b0}};
+  assign receiver_kills = {TOTAL_BUSES{1'b0}};
+  assign receiver_incepts = {TOTAL_BUSES{1'b0}};
+  assign receiver_sends = {TOTAL_BUSES{1'b0}};
+  assign receiver_streams = {TOTAL_BUSES{1'b0}};
+  assign receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_self_permissions = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_self_addresses = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_incept_permissions = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_incept_addresses = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
 
   core0 #(
     .WORD_MAG(WORD_MAG),
@@ -120,7 +136,7 @@ module core0_base(
     sender_send_acks,
     sender_stream_acks,
 
-    receiver_enable,
+    receiver_enables,
     receiver_kills,
     receiver_kill_acks,
     receiver_incepts,
