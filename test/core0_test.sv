@@ -1,14 +1,14 @@
 `include "../test/core0_base.sv"
 
-module core0_test1;
+module core0_test;
   /// The log2 of the word width of the core
   localparam WORD_MAG = 5;
   localparam WORD_WIDTH = 1 << WORD_MAG;
   /// This is the width of the program memory address bus
-  localparam PROGRAM_ADDR_WIDTH = 4;
+  localparam PROGRAM_ADDR_WIDTH = 5;
   localparam PROGRAM_SIZE = 1 << PROGRAM_ADDR_WIDTH;
   /// This is the width of the main memory address bus
-  localparam MAIN_ADDR_WIDTH = 1;
+  localparam MAIN_ADDR_WIDTH = 2;
   localparam MEMORY_SIZE = 1 << MAIN_ADDR_WIDTH;
   /// This is how many recursions are possible with the cstack
   localparam CSTACK_DEPTH = 2;
@@ -66,11 +66,9 @@ module core0_test1;
     clk = 0; #1; clk = 1; #1;
     clk = 0; #1; clk = 1; #1;
     clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
+
+    // Test for test1 condition
+    $display("test 1: %s", mainmem[0] == {WORD_WIDTH{1'b0}} ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
@@ -78,7 +76,11 @@ module core0_test1;
       programmem_read_value <= programmem[0];
       mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     end else begin
+      if (programmem_we)
+        programmem[programmem_addr] <= programmem_write_value;
       programmem_read_value <= programmem[programmem_addr];
+      if (mainmem_we)
+        mainmem[mainmem_write_addr] <= mainmem_write_value;
       mainmem_read_value <= mainmem[mainmem_read_addr];
     end
   end
