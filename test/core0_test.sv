@@ -58,17 +58,45 @@ module core0_test;
   initial begin
     $dumpfile("test.vcd");
     $dumpvars;
-    $readmemh("bin/test1.list", programmem);
 
+    $readmemh("bin/write.list", programmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
-    clk = 0; #1; clk = 1; #1;
+    for (int i = 0; i < 3; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
 
     // Test for test1 condition
-    $display("test 1: %s", mainmem[0] == {WORD_WIDTH{1'b0}} ? "pass" : "fail");
+    $display("write: %s", mainmem[0] == 0 ? "pass" : "fail");
+
+    $readmemh("bin/add.list", programmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 3; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    // Test for test1 condition
+    $display("add: %s", mainmem[0] == 0 ? "pass" : "fail");
+
+    $readmemh("bin/synchronous_read.list", programmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 7; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    // Test for test1 condition
+    $display("synchronous read: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
