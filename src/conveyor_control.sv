@@ -43,11 +43,11 @@ module conveyor_control(
   output reg [FAULT_ADDR_WIDTH-1:0] fault;
 
   reg [1:0][CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors;
-  reg [1:0][CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors_next;
   reg [1:0][CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads;
 
   wire [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] active_conveyor;
   wire [CONVEYOR_WIDTH-1:0] conveyor_access_slot;
+  wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_head;
   wire [CONVEYOR_ADDR_WIDTH-1:0] conveyor_access;
   wire conveyor_access_finished;
   wire [FAULT_ADDR_WIDTH-1:0] conveyor_access_fault;
@@ -55,14 +55,14 @@ module conveyor_control(
   assign active_conveyor = conveyors[interrupt_active];
   assign conveyor_head = conveyor_heads[interrupt_active];
   assign conveyor_access = conveyor_head + instruction[3:0];
-  assign conveyor_access_slot = (load_last && (conveyor_access == conveyor_head)) ?
+  assign conveyor_access_slot = (load_last && conveyor_access == conveyor_head) ?
     {1'b1, `F_NONE, mem_in} : active_conveyor[conveyor_access];
   assign conveyor_value = conveyor_access_slot[WORD_WIDTH-1:0];
   assign conveyor_access_finished = conveyor_access_slot[CONVEYOR_WIDTH-1];
   assign conveyor_access_fault = conveyor_access_slot[CONVEYOR_WIDTH-2:CONVEYOR_WIDTH-1-FAULT_ADDR_WIDTH];
 
-  assign conveyor_back1 = conveyor_access - 1;
-  assign conveyor_back2 = conveyor_access - 2;
+  assign conveyor_back1 = conveyor_head - 1;
+  assign conveyor_back2 = conveyor_head - 2;
 
   always @* begin
     // Even if there is an interrupt, we need to indicate halt so it knows which instruction to return to
@@ -86,7 +86,10 @@ module conveyor_control(
 
   always @(posedge clk) begin
     if (reset) begin
-      conveyors <= 0;
+      for (int i = 0; i < CONVEYOR_SIZE; i++) begin
+        conveyors[0][i] <= {1'b0, `F_NONE, {WORD_WIDTH{1'b0}}};
+        conveyors[1][i] <= {1'b0, `F_NONE, {WORD_WIDTH{1'b0}}};
+      end
       conveyor_heads <= 0;
     end else begin
       if (load_last) begin
