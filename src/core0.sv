@@ -395,6 +395,7 @@ module core0(
     .top(dstack_top),
     .second(dstack_second),
     .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
+    .handle_interrupt,
     .conveyor_memload_last(mem_ctrl_conveyor_memload_last),
     .dstack_memload_last(mem_ctrl_dstack_memload_last),
     .dcs,
@@ -428,6 +429,7 @@ module core0(
     .reset,
     .instruction,
     .interrupt_active,
+    .handle_interrupt,
     .servicing_interrupt,
     .interrupt_bus(chosen_send_bus),
     .interrupt_value(chosen_interrupt_value),
@@ -498,7 +500,6 @@ module core0(
     // TODO: Handle this case explicitly to prevent the wasted cycle
     (handle_interrupt && instruction == `I_READA) ||
     ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
-    mem_ctrl_conveyor_memload ||
     mem_ctrl_dstack_memload ||
     conveyor_halt;
 

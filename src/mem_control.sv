@@ -6,6 +6,7 @@ module mem_control(
   top,
   second,
   alu_out,
+  handle_interrupt,
   stream_in,
   stream_in_value,
   stream_out,
@@ -35,6 +36,7 @@ module mem_control(
   input [WORD_WIDTH-1:0] top;
   input [WORD_WIDTH-1:0] second;
   input [MAIN_ADDR_WIDTH-1:0] alu_out;
+  input handle_interrupt;
   input stream_in, stream_out;
   input [WORD_WIDTH-1:0] stream_in_value;
   input [MAIN_ADDR_WIDTH-1:0] stream_address;
@@ -180,6 +182,19 @@ module mem_control(
         write_value = {WORD_WIDTH{1'bx}};
         read_address = top;
         conveyor_memload = 0;
+        dstack_memload = 0;
+      end
+      `I_READA: begin
+        choice = 2'bx;
+        dc_next_directions = dc_directions;
+        dc_next_modifies = dc_modifies;
+        dc_nexts = dcs;
+        reload = 0;
+        write_out = 0;
+        write_address = {MAIN_ADDR_WIDTH{1'bx}};
+        write_value = {WORD_WIDTH{1'bx}};
+        read_address = top;
+        conveyor_memload = !handle_interrupt;
         dstack_memload = 0;
       end
       `I_RWRITEZ: begin
