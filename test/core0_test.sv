@@ -78,12 +78,12 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 3; i++) begin
+    for (int i = 0; i < 5; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
     // Test for test1 condition
-    $display("add: %s", mainmem[0] == 0 ? "pass" : "fail");
+    $display("add: %s", core0_base.core0.dstack_top == 0 ? "pass" : "fail");
 
     $readmemh("bin/synchronous_read.list", programmem);
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
