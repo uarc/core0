@@ -199,10 +199,23 @@ module core0_test;
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("loop: %s",
+    $display("loop immediate: %s",
       (core0_base.core0.dstack_top == 0 &&
         core0_base.core0.dstack_second == 1 &&
         core0_base.core0.dstack_third == 0) ? "pass" : "fail");
+
+    $readmemh("bin/loop_double_nested_prog.list", programmem);
+    $readmemh("bin/loop_double_nested_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 48; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
