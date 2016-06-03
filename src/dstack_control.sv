@@ -48,7 +48,7 @@ module dstack_control(
         if (instruction[6] == 1'b1) begin
           movement = 2'b01;
           rotate = 0;
-          rotate_addr = 5'bx;
+          rotate_addr = instruction[5:0];
         // rotate
         end else begin
           movement = 2'b00;
@@ -140,6 +140,7 @@ module dstack_control(
       `I_DIV: next_top = third;
       `I_DIVU: next_top = third;
       `I_ROTZ: next_top = rotate_value;
+      `I_COPYZ: next_top = rotate_value;
       default: next_top = {WORD_WIDTH{1'bx}};
     endcase
   end
