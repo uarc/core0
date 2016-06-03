@@ -9,6 +9,7 @@
 `include "../src/faults.sv"
 `include "../src/conveyor_control.sv"
 `include "../src/dstack_control.sv"
+`include "../src/dc_val_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -141,6 +142,7 @@ module core0(
   // Indicates if this subroutine set the dcs disallowing them to be restored
   reg [3:0] dc_modifies;
   reg [3:0][WORD_WIDTH-1:0] dc_vals;
+  wire [3:0][WORD_WIDTH-1:0] dc_vals_next;
   // Indicates if a dc was advanced last cycle and a new value must be loaded from memory
   reg dc_reload;
   // Which DC to mutate on the cycle following a DC movement where dc_advance is set
@@ -295,7 +297,7 @@ module core0(
     .carry,
     // Pad each DC individually with 0s so they can be added in the ALU
     .dcs({dcs[3][WORD_WIDTH-1:0], dcs[2][WORD_WIDTH-1:0], dcs[1][WORD_WIDTH-1:0], dcs[0][WORD_WIDTH-1:0]}),
-    .dc_vals,
+    .dc_vals(dc_vals_next),
     .alu_a,
     .alu_ic,
     .alu_opcode,
@@ -360,7 +362,7 @@ module core0(
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_total, lstack_index};
   assign lstack_after_ending = lstack_ending + 1;
   assign lstack_index_advance = lstack_index + 1;
-  assign lstack_next_iter = instruction == `I_CONTINUE || pc == lstack_ending;
+  assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc == lstack_ending);
   assign iterators[0] = lstack_index;
   assign iterators[1] = lstack_tops[0][WORD_WIDTH-1:0];
   assign iterators[2] = lstack_tops[1][WORD_WIDTH-1:0];
@@ -415,6 +417,14 @@ module core0(
     .choice(dc_ctrl_choice)
   );
 
+  dc_val_control #(.WORD_WIDTH(WORD_WIDTH)) dc_val_control(
+    .dc_vals,
+    .dc_reload,
+    .dc_mutate,
+    .mem_in(mainmem_read_value),
+    .dc_vals_next
+  );
+
   jump_immediate_control #(.WORD_WIDTH(WORD_WIDTH)) jump_immediate_control(
     .instruction,
     .top(dstack_top),
@@ -447,7 +457,7 @@ module core0(
     .instruction,
     .halt,
     .dcs({dcs[3][WORD_WIDTH-1:0], dcs[2][WORD_WIDTH-1:0], dcs[1][WORD_WIDTH-1:0], dcs[0][WORD_WIDTH-1:0]}),
-    .dc_vals,
+    .dc_vals(dc_vals_next),
     .iterators,
     .top(dstack_top),
     .second(dstack_second),
@@ -483,9 +493,10 @@ module core0(
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
     cstack_pop ? cstack_top_progaddr :
-    jump_immediate ? dc_vals[0][PROGRAM_ADDR_WIDTH-1:0] :
+    jump_immediate ? dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_after_ending :
+    lstack_next_iter ? lstack_beginning :
     pc_advance;
   assign pc_next = reset ? {PROGRAM_ADDR_WIDTH{1'b0}} :
     handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
@@ -527,7 +538,7 @@ module core0(
       dc_vals <= 0;
       dc_directions <= 0;
       dc_modifies <= 0;
-      dc_mutate <= 2'b0;
+      dc_mutate <= 0;
       dc_reload <= 1'b1;
 
       carry <= 0;
@@ -549,12 +560,11 @@ module core0(
       pc <= pc_next;
       dc_mutate <= dc_ctrl_choice;
       dcs <= dc_ctrl_nexts;
+      dc_vals <= dc_vals_next;
       dc_directions <= dc_ctrl_next_directions;
       dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
-      if (dc_reload)
-        dc_vals[dc_mutate] <= mainmem_read_value;
       if (handle_interrupt) begin
         interrupt_active <= 1'b1;
         // Clear these so they get reloaded again when we return from the interrupt
@@ -579,6 +589,8 @@ module core0(
       // lstack top is stored in this module so manually handle the pop case
       if (lstack_pop)
         {lstack_beginning, lstack_ending, lstack_total, lstack_index} <= lstack_tops[0];
+      else if (lstack_next_iter)
+        lstack_index <= lstack_index_advance;
       // Store carry when instructions produce it
       if (alu_cntl_store_carry)
         carry <= alu_oc;
@@ -595,7 +607,7 @@ module core0(
         `I_SEL: bus_selections <= bus_selections_sel;
         `I_LOOPI: begin
           lstack_beginning <= pc_advance;
-          lstack_ending <= dc_vals[0][PROGRAM_ADDR_WIDTH-1:0];
+          lstack_ending <= dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0];
           lstack_total <= dstack_top;
           lstack_index <= 0;
         end
