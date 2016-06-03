@@ -124,6 +124,22 @@ module core0_test;
     // Test for test1 condition
     $display("multi async read: %s",
       (core0_base.core0.dstack_top == 2 && core0_base.core0.dstack_second == 1) ? "pass" : "fail");
+
+    $readmemh("bin/rotate.list", programmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 6; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    // Test for test1 condition
+    $display("rotate: %s",
+      (core0_base.core0.dstack_top == 2 &&
+        core0_base.core0.dstack_second == 0 &&
+        core0_base.core0.dstack_third == 0) ? "pass" : "fail");
   end
 
   always @(posedge clk) begin

@@ -44,16 +44,16 @@ module dstack_control(
       rotate_addr = 5'bx;
     end else begin
       if (instruction[7] == 1'b1) begin
-        // rotate
-        if (instruction[6] == 1'b1) begin
-          movement = 2'b00;
-          rotate = 1;
-          rotate_addr = instruction[5:0];
         // copy
-        end else begin
+        if (instruction[6] == 1'b1) begin
           movement = 2'b01;
           rotate = 0;
           rotate_addr = 5'bx;
+        // rotate
+        end else begin
+          movement = 2'b00;
+          rotate = 1;
+          rotate_addr = instruction[5:0];
         end
       end else begin
         movement = instruction[6:5];
