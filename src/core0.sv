@@ -390,6 +390,7 @@ module core0(
   );
 
   mem_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH), .WORD_WIDTH(WORD_WIDTH)) mem_control(
+    .reset,
     .instruction,
     .jump_immediate,
     .top(dstack_top),
@@ -482,11 +483,12 @@ module core0(
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
     cstack_pop ? cstack_top_progaddr :
-    jump_immediate ? dc_vals[0] :
+    jump_immediate ? dc_vals[0][PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_after_ending :
     pc_advance;
-  assign pc_next = handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
+  assign pc_next = reset ? {PROGRAM_ADDR_WIDTH{1'b0}} :
+    handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
   assign programmem_addr = pc_next;
 
   assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
@@ -525,7 +527,8 @@ module core0(
       dc_vals <= 0;
       dc_directions <= 0;
       dc_modifies <= 0;
-      dc_reload <= 0;
+      dc_mutate <= 2'b0;
+      dc_reload <= 1'b1;
 
       carry <= 0;
       overflow <= 0;
