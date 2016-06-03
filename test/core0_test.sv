@@ -174,6 +174,19 @@ module core0_test;
     end
 
     $display("jump immediate: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
+
+    $readmemh("bin/add_immediate_prog.list", programmem);
+    $readmemh("bin/add_immediate_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 2; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("add immediate: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
