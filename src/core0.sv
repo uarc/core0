@@ -163,7 +163,9 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
-  wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_seti;
+  wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_iset;
+  reg [TOTAL_BUSES-1:0][MAIN_ADDR_WIDTH-1:0] interrupt_dc0s;
+  wire [TOTAL_BUSES-1:0][MAIN_ADDR_WIDTH-1:0] interrupt_dc0s_iset;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_set;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_sel;
 
@@ -376,8 +378,9 @@ module core0(
             (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH])
         );
 
-      assign interrupt_addresses_seti[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
-        dstack_top[PROGRAM_ADDR_WIDTH-1:0] : interrupt_addresses[i];
+      assign {interrupt_addresses_iset[i], interrupt_dc0s_iset[i]} = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
+        {dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0], dstack_top[MAIN_ADDR_WIDTH-1:0]} :
+        {interrupt_addresses[i], interrupt_dc0s[i]};
 
       assign bus_selections_set[i] = (i / WORD_WIDTH == dstack_top) ? dstack_second[i % WORD_WIDTH] : 1'b0;
     end
@@ -600,7 +603,10 @@ module core0(
 
       // Handle instruction specific state changes
       casez (instruction)
-        `I_ISET: interrupt_addresses <= interrupt_addresses_seti;
+        `I_ISET: begin
+          interrupt_addresses <= interrupt_addresses_iset;
+          interrupt_dc0s <= interrupt_dc0s_iset;
+        end
         `I_SLB: bus_selections[dstack_top] <= 1'b1;
         `I_USB: bus_selections[dstack_top] <= 1'b0;
         `I_SET: bus_selections <= bus_selections_set;
