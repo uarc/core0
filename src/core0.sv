@@ -185,6 +185,8 @@ module core0(
   wire call;
   // This is asserted whenever we are returning from a call
   wire returning;
+  // This is asserted when we want to update the cstack top with new values
+  wire return_update;
   // This is asserted whenever the PC is going to jump/move
   wire jump;
   // This tells the processor not to respond to any interrupts or advance the PC
@@ -224,6 +226,12 @@ module core0(
   wire [3:0] cstack_insert_dc_directions;
   wire [3:0] cstack_insert_dc_modifies;
   wire cstack_insert_interrupt;
+  // cstack insert on return_update signal
+  wire [PROGRAM_ADDR_WIDTH-1:0] cstack_update_progaddr;
+  wire [3:0][WORD_WIDTH-1:0] cstack_update_dcs;
+  wire [3:0] cstack_update_dc_directions;
+  wire [3:0] cstack_update_dc_modifies;
+  wire cstack_update_interrupt;
   // cstack top signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
   wire [3:0][WORD_WIDTH-1:0] cstack_top_dcs;
@@ -258,6 +266,7 @@ module core0(
   // Any time an interrupt is being serviced at all this cycle
   wire servicing_interrupt;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
+  wire [MAIN_ADDR_WIDTH-1:0] interrupt_dc0;
   wire [WORD_WIDTH-1:0] chosen_interrupt_value;
 
   // Signals for mem_control
@@ -266,7 +275,7 @@ module core0(
   wire [3:0] dc_ctrl_next_modifies;
   wire dc_ctrl_reload;
   wire [1:0] dc_ctrl_choice;
-  wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload;
+  wire mem_ctrl_conveyor_memload, mem_ctrl_dstack_memload, mem_ctrl_interrupt_memory_conflict;
   reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last;
 
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
@@ -342,13 +351,25 @@ module core0(
   );
 
   // Assign signals for cstack
-  assign cstack_push = call;
-  assign cstack_pop = returning;
-  assign cstack_insert_progaddr = pc_next_nointerrupt;
-  assign cstack_insert_dcs = dc_ctrl_nexts;
-  assign cstack_insert_dc_directions = dc_ctrl_next_directions;
-  assign cstack_insert_dc_modifies = dc_ctrl_next_modifies;
-  assign cstack_insert_interrupt = handle_interrupt;
+  assign cstack_push = call || return_update;
+  assign cstack_pop = returning || return_update;
+  // cstack insert
+  assign cstack_insert_progaddr = return_update ? cstack_update_progaddr : pc_next_nointerrupt;
+  assign cstack_insert_dcs = return_update ? cstack_update_dcs : dc_ctrl_nexts;
+  assign cstack_insert_dc_directions = return_update ? cstack_update_dc_directions : dc_ctrl_next_directions;
+  assign cstack_insert_dc_modifies = return_update ? cstack_update_dc_modifies : dc_ctrl_next_modifies;
+  assign cstack_insert_interrupt = return_update ? cstack_update_interrupt : handle_interrupt;
+  // cstack update
+  assign cstack_update_progaddr = cstack_top_progaddr;
+  generate
+    for (i = 0; i < 4; i = i + 1) begin: CSTACK_UPDATE_GENERATE
+      assign {cstack_update_dcs[i], cstack_update_dc_directions[i], cstack_update_dc_modifies[i]} =
+        dc_ctrl_next_modifies[i] ?
+          {cstack_top_dcs[i], cstack_top_dc_directions[i], cstack_top_dc_modifies[i]} :
+          {dc_ctrl_nexts[i], dc_ctrl_next_directions[i], dc_ctrl_next_modifies[i]};
+    end
+  endgenerate
+  assign cstack_update_interrupt = cstack_top_interrupt;
 
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
     .clk,
@@ -402,9 +423,11 @@ module core0(
     .second(dstack_second),
     .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
     .handle_interrupt,
+    .interrupt_dc0,
     .conveyor_memload_last(mem_ctrl_conveyor_memload_last),
     .dstack_memload_last(mem_ctrl_dstack_memload_last),
     .dcs,
+    .dc_val0(dc_vals_next[0]),
     .dc_directions,
     .dc_modifies,
     .dc_nexts(dc_ctrl_nexts),
@@ -416,6 +439,7 @@ module core0(
     .read_address(mainmem_read_addr),
     .conveyor_memload(mem_ctrl_conveyor_memload),
     .dstack_memload(mem_ctrl_dstack_memload),
+    .interrupt_memory_conflict(mem_ctrl_interrupt_memory_conflict),
     .reload(dc_ctrl_reload),
     .choice(dc_ctrl_choice)
   );
@@ -484,6 +508,9 @@ module core0(
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
   assign returning = instruction == `I_RET;
+  // If we are doing a call or returning then the correct value will get updated anyways.
+  // However, we otherwise need to do a return_update to update unset DCs so they will be preserved on return.
+  assign return_update = !call && !returning;
 
   assign instruction = programmem_read_value;
   // Whatever fault we will service next instruction (none if F_NONE)
@@ -495,7 +522,7 @@ module core0(
   assign pc_next_nointerrupt =
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
-    cstack_pop ? cstack_top_progaddr :
+    returning ? cstack_top_progaddr :
     jump_immediate ? dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_after_ending :
@@ -509,15 +536,14 @@ module core0(
   assign interrupt_recv = instruction == `I_RECV;
   assign servicing_interrupt = chosen_send_on && !interrupt_active;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
+  assign interrupt_dc0 = interrupt_dc0s[chosen_send_bus];
   assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
 
   assign halt =
-    // Halt when we switch to an interrupt while doing an async read so it goes back to it again
-    // TODO: Handle this case explicitly to prevent the wasted cycle
-    (handle_interrupt && instruction == `I_READA) ||
     ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
     mem_ctrl_dstack_memload ||
-    conveyor_halt;
+    conveyor_halt ||
+    mem_ctrl_interrupt_memory_conflict;
 
   // Assign all the rest of the things statially which arent used yet
   // TODO: Do these things properly
@@ -562,10 +588,22 @@ module core0(
     end else begin
       pc <= pc_next;
       dc_mutate <= dc_ctrl_choice;
-      dcs <= dc_ctrl_nexts;
+      // If we are reloading LD0I, the code needs to explicitly handle the case here
+      // TODO: Possibly add an "actual_dc_next" vs "this_dc_next" if this logic is needed in multiple places
+      if (handle_interrupt) begin
+        dcs <= {dcs[3:1], interrupt_dc0};
+        dc_directions <= dc_ctrl_next_directions & 4'b1110;
+        dc_modifies <= dc_ctrl_next_modifies | 4'b0001;
+      end else if (instruction == `I_LD0I) begin
+        dcs <= {dc_ctrl_nexts[3:1], dc_vals[0]};
+        dc_directions <= dc_ctrl_next_directions & 4'b1110;
+        dc_modifies <= dc_ctrl_next_modifies | 4'b0001;
+      end else begin
+        dcs <= dc_ctrl_nexts;
+        dc_directions <= dc_ctrl_next_directions;
+        dc_modifies <= dc_ctrl_next_modifies;
+      end
       dc_vals <= dc_vals_next;
-      dc_directions <= dc_ctrl_next_directions;
-      dc_modifies <= dc_ctrl_next_modifies;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
       if (handle_interrupt) begin
@@ -578,7 +616,7 @@ module core0(
         mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
         mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
       end
-      if (cstack_pop) begin
+      if (returning) begin
         if (cstack_top_interrupt)
           interrupt_active <= 1'b0;
         for (int i = 0; i < 4; i++) begin

@@ -19,6 +19,7 @@
 `define I_CONTINUE 8'h10
 `define I_IEN 8'h11
 `define I_RECV 8'h12
+`define I_LD0I 8'h13
 `define I_KILL 8'h14
 `define I_WAIT 8'h15
 `define I_GETBP 8'h16
