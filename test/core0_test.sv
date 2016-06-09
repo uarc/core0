@@ -211,7 +211,7 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 48; i++) begin
+    for (int i = 0; i < 31; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
