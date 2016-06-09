@@ -557,7 +557,7 @@ module core0(
   assign global_data = {WORD_WIDTH{1'bx}};
   assign receiver_kill_acks = {TOTAL_BUSES{1'b0}};
   assign receiver_incept_acks = {TOTAL_BUSES{1'b0}};
-  assign receiver_send_acks = {TOTAL_BUSES{1'b0}};
+  assign receiver_send_acks = servicing_interrupt << chosen_send_bus;
   assign receiver_stream_acks = {TOTAL_BUSES{1'b0}};
 
   always @(posedge clk) begin
