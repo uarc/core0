@@ -76,6 +76,7 @@ module dstack_control(
       `I_CONTINUE: next_top = top;
       `I_IEN: next_top = top;
       `I_RECV: next_top = top;
+      `I_LD0I: next_top = top;
       `I_KILL: next_top = top;
       `I_WAIT: next_top = top;
       `I_GETBP: next_top = receiver_self_permissions[top];
