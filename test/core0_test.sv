@@ -11,7 +11,7 @@ module core0_test;
   localparam MAIN_ADDR_WIDTH = 2;
   localparam MEMORY_SIZE = 1 << MAIN_ADDR_WIDTH;
   /// This is how many recursions are possible with the cstack
-  localparam CSTACK_DEPTH = 2;
+  localparam CSTACK_DEPTH = 16;
   /// This is how many loops can be nested with the lstack
   localparam LSTACK_DEPTH = 3;
   /// Increasing this by 1 doubles the length of the conveyor buffer
@@ -31,6 +31,8 @@ module core0_test;
   reg [WORD_WIDTH-1:0] mainmem_read_value;
   wire [WORD_WIDTH-1:0] mainmem_write_value;
   wire mainmem_we;
+
+  reg sequential_test_success;
 
   core0_base #(
       .WORD_MAG(5),
@@ -242,6 +244,25 @@ module core0_test;
     end
 
     $display("calli double nested: %s", core0_base.core0.dstack_top == 3 ? "pass" : "fail");
+
+    $readmemh("bin/conditional_branching_prog.list", programmem);
+    $readmemh("bin/conditional_branching_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    sequential_test_success = 1'b1;
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 3; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+    sequential_test_success = sequential_test_success && core0_base.core0.pc == 3;
+    for (int i = 0; i < 2; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+    sequential_test_success = sequential_test_success && core0_base.core0.pc == 8;
+
+    $display("conditional branching: %s", sequential_test_success ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
