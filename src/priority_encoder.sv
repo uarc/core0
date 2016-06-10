@@ -1,3 +1,5 @@
+`ifndef PRIORITY_ENCODER_SV
+`define PRIORITY_ENCODER_SV
 module priority_encoder(
 	lines,
 	out,
@@ -44,3 +46,4 @@ module priority_encoder(
 		end
 	endgenerate
 endmodule
+`endif

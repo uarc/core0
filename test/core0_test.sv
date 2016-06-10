@@ -264,6 +264,19 @@ module core0_test;
 
     $display("conditional branching: %s", sequential_test_success ? "pass" : "fail");
 
+    $readmemh("bin/subroutine_dc0_prog.list", programmem);
+    $readmemh("bin/subroutine_dc0_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 6; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("subroutine dc0: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
+
     $readmemh("bin/subroutine_immediate_dc0_prog.list", programmem);
     $readmemh("bin/subroutine_immediate_dc0_data.list", mainmem);
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -276,6 +289,19 @@ module core0_test;
     end
 
     $display("subroutine immediate dc0: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
+
+    $readmemh("bin/subroutine_dc0_restore_prog.list", programmem);
+    $readmemh("bin/subroutine_dc0_restore_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 6; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("subroutine dc0 restore: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
   end
 
   always @(posedge clk) begin

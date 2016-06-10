@@ -137,6 +137,9 @@ module core0(
   reg [PROGRAM_ADDR_WIDTH-1:0] pc;
   reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_nexts;
+  // dc0 is always loaded, but dc1-3 may or may not be loaded at any given point in time
+  reg [3:1] dc_loadeds;
+  wire [3:1] dc_loadeds_next;
   // Determines the direction of DC writes (0 - post-increment; 1 - pre-decrement)
   reg [3:0] dc_directions;
   // Indicates if this subroutine set the dcs disallowing them to be restored
@@ -215,26 +218,26 @@ module core0(
   wire dstack_rotate;
   wire dstack_overflow;
 
-  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (WORD_WIDTH + 2) + 1;
+  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (MAIN_ADDR_WIDTH + 2) + 1;
 
   // Signals for the cstack
   wire cstack_push;
   wire cstack_pop;
   // cstack insert signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_insert_progaddr;
-  wire [3:0][WORD_WIDTH-1:0] cstack_insert_dcs;
+  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_insert_dcs;
   wire [3:0] cstack_insert_dc_directions;
   wire [3:0] cstack_insert_dc_modifies;
   wire cstack_insert_interrupt;
   // cstack insert on return_update signal
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_update_progaddr;
-  wire [3:0][WORD_WIDTH-1:0] cstack_update_dcs;
+  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_update_dcs;
   wire [3:0] cstack_update_dc_directions;
   wire [3:0] cstack_update_dc_modifies;
   wire cstack_update_interrupt;
   // cstack top signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
-  wire [3:0][WORD_WIDTH-1:0] cstack_top_dcs;
+  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_top_dcs;
   wire [3:0] cstack_top_dc_directions;
   wire [3:0] cstack_top_dc_modifies;
   wire cstack_top_interrupt;
@@ -442,10 +445,15 @@ module core0(
     .dstack_memload_last(mem_ctrl_dstack_memload_last),
     .loop_memory_conflict_last(mem_ctrl_loop_memory_conflict_last),
     .dcs,
+    .dc_loadeds,
     .dc_val0(dc_vals_next[0]),
     .dc_directions,
     .dc_modifies,
+    .return_dcs(cstack_top_dcs),
+    .return_dc_directions(cstack_top_dc_directions),
+    .return_dc_modifies(cstack_top_dc_modifies),
     .dc_nexts,
+    .dc_loadeds_next,
     .dc_next_directions(dc_ctrl_next_directions),
     .dc_next_modifies(dc_ctrl_next_modifies),
     .write_out(mainmem_we),
@@ -581,6 +589,7 @@ module core0(
     if (reset) begin
       pc <= 0;
       dcs <= 0;
+      dc_loadeds <= 0;
       dc_vals <= 0;
       dc_directions <= 0;
       dc_modifies <= 0;
@@ -622,6 +631,7 @@ module core0(
         dc_directions <= dc_ctrl_next_directions;
         dc_modifies <= dc_ctrl_next_modifies;
       end
+      dc_loadeds <= dc_loadeds_next;
       dc_vals <= dc_vals_next;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
@@ -635,17 +645,9 @@ module core0(
         mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
         mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
       end
-      if (returning) begin
-        if (cstack_top_interrupt)
+      // On the exit of an interrupt, switch back to the normal state and pipelines
+      if (returning && cstack_top_interrupt)
           interrupt_active <= 1'b0;
-        for (int i = 0; i < 4; i++) begin
-          if (!dc_modifies[i]) begin
-            dcs[i] <= cstack_top_dcs[i];
-            dc_modifies[i] <= cstack_top_dc_modifies[i];
-            dc_directions[i] <= cstack_top_dc_directions[i];
-          end
-        end
-      end
       // lstack top is stored in this module so manually handle the pop case
       if (lstack_pop)
         {lstack_beginning, lstack_ending, lstack_total, lstack_dc0, lstack_index} <= lstack_tops[0];
