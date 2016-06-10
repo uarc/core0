@@ -359,7 +359,13 @@ module core0(
   assign cstack_push = call || return_update;
   assign cstack_pop = returning || return_update;
   // cstack insert
-  assign cstack_insert_progaddr = return_update ? cstack_update_progaddr : pc_next_nointerrupt;
+  assign cstack_insert_progaddr =
+    // Interrupts trump all and always return to the address that would have been executed next
+    handle_interrupt ? pc_next_nointerrupt :
+    // If we are updating the return we always use the update progaddr
+    return_update ? cstack_update_progaddr :
+    // Otherwise calls of various kinds return to the instruction following the present
+    pc_advance;
   assign cstack_insert_dcs = return_update ? cstack_update_dcs : dc_nexts;
   assign cstack_insert_dc_directions = return_update ? cstack_update_dc_directions : dc_ctrl_next_directions;
   assign cstack_insert_dc_modifies = return_update ? cstack_update_dc_modifies : dc_ctrl_next_modifies;

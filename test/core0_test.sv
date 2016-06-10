@@ -216,6 +216,19 @@ module core0_test;
     end
 
     $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
+
+    $readmemh("bin/calli_prog.list", programmem);
+    $readmemh("bin/calli_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 5; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("calli: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
   end
 
   always @(posedge clk) begin
