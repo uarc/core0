@@ -23,6 +23,7 @@ module core0_test;
   reg clk, reset;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   reg [7:0] programmem_read_value;
+  wire [((PROGRAM_ADDR_WIDTH+3)/4)-1:0] programmem_write_addr;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
 
@@ -47,6 +48,7 @@ module core0_test;
 
       programmem_addr,
       programmem_read_value,
+      programmem_write_addr,
       programmem_write_value,
       programmem_we,
 
@@ -302,11 +304,34 @@ module core0_test;
     end
 
     $display("subroutine dc0 restore: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
+
+    $readmemh("bin/writep_prog.list", programmem);
+    $readmemh("bin/writep_data.list", mainmem);
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    for (int i = 0; i < 5; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("writep: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
   end
 
+  genvar gi;
+  wire [WORD_WIDTH/8-1:0][7:0] progmem_individuals;
+  generate
+    for (gi = 0; gi < WORD_WIDTH/8; gi = gi + 1) begin : INDIVIDUAL_PMEM_LOOP
+      assign progmem_individuals[gi] = programmem_write_value[gi*8+7:gi*8];
+    end
+  endgenerate
+
   always @(posedge clk) begin
-    if (programmem_we)
-      programmem[programmem_addr] <= programmem_write_value;
+    if (programmem_we) begin
+      for (int j = 0; j < WORD_WIDTH/8; j++)
+        programmem[programmem_write_addr*4 + j] <= progmem_individuals[j];
+    end
     programmem_read_value <= programmem[programmem_addr];
     if (mainmem_we)
       mainmem[mainmem_write_addr] <= mainmem_write_value;

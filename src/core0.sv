@@ -20,6 +20,7 @@ module core0(
 
   programmem_addr,
   programmem_read_value,
+  programmem_write_addess,
   programmem_write_value,
   programmem_we,
 
@@ -88,6 +89,7 @@ module core0(
   // Program memory interface
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [7:0] programmem_read_value;
+  output [((PROGRAM_ADDR_WIDTH+3)/4)-1:0] programmem_write_addess;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
@@ -570,10 +572,9 @@ module core0(
     mem_ctrl_interrupt_memory_conflict ||
     mem_ctrl_loop_memory_conflict;
 
-  // Assign all the rest of the things statially which arent used yet
-  // TODO: Do these things properly
-  assign programmem_write_value = 8'bx;
-  assign programmem_we = 1'b0;
+  assign programmem_write_value = dstack_second;
+  assign programmem_we = instruction == `I_WRITEP;
+  assign programmem_write_addess = dstack_top;
 
   assign global_kill = 1'b0;
   assign global_incept = 1'b0;
