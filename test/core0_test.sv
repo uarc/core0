@@ -330,7 +330,7 @@ module core0_test;
   always @(posedge clk) begin
     if (programmem_we) begin
       for (int j = 0; j < WORD_WIDTH/8; j++)
-        programmem[programmem_write_addr*4 + j] <= progmem_individuals[j];
+        programmem[programmem_write_addr*(WORD_WIDTH/8) + j] <= progmem_individuals[j];
     end
     programmem_read_value <= programmem[programmem_addr];
     if (mainmem_we)
