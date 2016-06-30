@@ -23,7 +23,7 @@ module core0_test;
   reg clk, reset;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   reg [7:0] programmem_read_value;
-  wire [((PROGRAM_ADDR_WIDTH+3)/4)-1:0] programmem_write_addr;
+  wire [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addr;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
 
