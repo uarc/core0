@@ -152,7 +152,7 @@ module dstack_element(
   always @(posedge clk) begin
     case (movement)
       // No movement
-      2'b00: ;
+      2'b00: out <= out;
       // Push
       2'b01: out <= above;
       // Pop

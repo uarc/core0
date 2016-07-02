@@ -78,7 +78,7 @@ module conveyor_control(
         fault = `F_NONE;
       end
       default: begin
-        halt = 0;
+        halt = 1'b0;
         fault = `F_NONE;
       end
     endcase

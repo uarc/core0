@@ -173,39 +173,40 @@ module mem_control(
           conveyor_memload = 1'b0;
           dstack_memload = !dstack_memload_last;
         end
-        // ADD0 is treated differently because at the end of a loop it never stalls
-        `I_ADD0: begin
-          two_stage_loop_move = 1'b0;
-          choice = 2'b0;
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[0] = dc_read_advances[0];
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = dc_read_advances[0];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
-        end
-        // ADD1-3 may stall at the end of a loop because dc0 and the other DC need to load
         `I_ADDZ: begin
-          two_stage_loop_move = 1'b1;
-          choice = instruction[1:0];
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[choice] = dc_read_advances[choice];
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = dc_read_advances[choice];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
+          // ADD0 is treated differently because at the end of a loop it never stalls
+          if (instruction == `I_ADD0) begin
+            two_stage_loop_move = 1'b0;
+            choice = 2'b0;
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            dc_nexts[0] = dc_read_advances[0];
+            dc_loadeds_next = dc_loadeds;
+            reload = 1'b1;
+            write_out = 1'b0;
+            write_address = {MAIN_ADDR_WIDTH{1'bx}};
+            write_value = {WORD_WIDTH{1'bx}};
+            read_address = dc_read_advances[0];
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          // ADD1-3 may stall at the end of a loop because dc0 and the other DC need to load
+          end else begin
+              two_stage_loop_move = 1'b1;
+              choice = instruction[1:0];
+              dc_next_directions = dc_directions;
+              dc_next_modifies = dc_modifies;
+              dc_nexts = dcs;
+              dc_nexts[choice] = dc_read_advances[choice];
+              dc_loadeds_next = dc_loadeds;
+              reload = 1'b1;
+              write_out = 1'b0;
+              write_address = {MAIN_ADDR_WIDTH{1'bx}};
+              write_value = {WORD_WIDTH{1'bx}};
+              read_address = dc_read_advances[choice];
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end
         end
         `I_RET: begin
           // Having a return at the end of a loop is a dont care case really, so just make it 1 cycle
@@ -263,144 +264,148 @@ module mem_control(
           conveyor_memload = 1'b0;
           dstack_memload = !dstack_memload_last;
         end
-        // In this case there is no conflict with the loop, so handle it specially
-        `I_READ0: begin
-          two_stage_loop_move = 1'b0;
-          choice = 2'b0;
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[0] = dc_read_advances[0];
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = dc_read_advances[0];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
-        end
         `I_READZ: begin
-          two_stage_loop_move = 1'b1;
-          choice = instruction[1:0];
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[choice] = dc_read_advances[choice];
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = dc_read_advances[choice];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
-        end
-        // The write has absolutely no conflicts with a loop when its dc0
-        `I_WRITE0: begin
-          two_stage_loop_move = 1'b0;
-          choice = 2'b0;
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[0] = dc_write_advances[0];
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          // Write nothing if this is the second cycle of a loop movement (or it will be the wrong address)
-          write_out = !loop_final_stage;
-          // Handle post-increment (0) vs pre-decrement (1)
-          write_address = dc_directions[0] ? dc_write_advances[0] : dcs[0];
-          write_value = top;
-          read_address = dc_write_advances[0];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
+          // In this case there is no conflict with the loop, so handle it specially
+          if (instruction == `I_READ0) begin
+            two_stage_loop_move = 1'b0;
+            choice = 2'b0;
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            dc_nexts[0] = dc_read_advances[0];
+            dc_loadeds_next = dc_loadeds;
+            reload = 1'b1;
+            write_out = 1'b0;
+            write_address = {MAIN_ADDR_WIDTH{1'bx}};
+            write_value = {WORD_WIDTH{1'bx}};
+            read_address = dc_read_advances[0];
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          end else begin
+            two_stage_loop_move = 1'b1;
+            choice = instruction[1:0];
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            dc_nexts[choice] = dc_read_advances[choice];
+            dc_loadeds_next = dc_loadeds;
+            reload = 1'b1;
+            write_out = 1'b0;
+            write_address = {MAIN_ADDR_WIDTH{1'bx}};
+            write_value = {WORD_WIDTH{1'bx}};
+            read_address = dc_read_advances[choice];
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          end
         end
         `I_WRITEZ: begin
-          two_stage_loop_move = 1'b1;
-          choice = instruction[1:0];
-          dc_next_directions = dc_directions;
-          dc_next_modifies = dc_modifies;
-          dc_nexts = dcs;
-          dc_nexts[choice] = dc_write_advances[choice];
-          // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
-          dc_loadeds_next = loaded_use_reload;
-          reload = 1'b1;
-          // Write nothing if this is the second cycle of a loop movement (or it will be the wrong address)
-          write_out = !loop_final_stage;
-          // Handle post-increment (0) vs pre-decrement (1)
-          write_address = dc_directions[choice] ? dc_write_advances[choice] : dcs[choice];
-          write_value = top;
-          read_address = dc_write_advances[choice];
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
-        end
-        // No conflict with loops for dc0
-        `I_SETF0: begin
-          two_stage_loop_move = 1'b0;
-          choice = 2'b0;
-          dc_next_directions = dc_directions & ~(1 << choice);
-          dc_next_modifies = dc_modifies | (1 << choice);
-          dc_nexts = dcs;
-          dc_nexts[0] = top;
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = top;
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
+          // The write has absolutely no conflicts with a loop when its dc0
+          if (instruction == `I_WRITE0) begin
+              two_stage_loop_move = 1'b0;
+              choice = 2'b0;
+              dc_next_directions = dc_directions;
+              dc_next_modifies = dc_modifies;
+              dc_nexts = dcs;
+              dc_nexts[0] = dc_write_advances[0];
+              dc_loadeds_next = dc_loadeds;
+              reload = 1'b1;
+              // Write nothing if this is the second cycle of a loop movement (or it will be the wrong address)
+              write_out = !loop_final_stage;
+              // Handle post-increment (0) vs pre-decrement (1)
+              write_address = dc_directions[0] ? dc_write_advances[0] : dcs[0];
+              write_value = top;
+              read_address = dc_write_advances[0];
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end else begin
+              two_stage_loop_move = 1'b1;
+              choice = instruction[1:0];
+              dc_next_directions = dc_directions;
+              dc_next_modifies = dc_modifies;
+              dc_nexts = dcs;
+              dc_nexts[choice] = dc_write_advances[choice];
+              // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
+              dc_loadeds_next = loaded_use_reload;
+              reload = 1'b1;
+              // Write nothing if this is the second cycle of a loop movement (or it will be the wrong address)
+              write_out = !loop_final_stage;
+              // Handle post-increment (0) vs pre-decrement (1)
+              write_address = dc_directions[choice] ? dc_write_advances[choice] : dcs[choice];
+              write_value = top;
+              read_address = dc_write_advances[choice];
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end
         end
         `I_SETFZ: begin
-          two_stage_loop_move = 1'b1;
-          choice = instruction[1:0];
-          dc_next_directions = dc_directions & ~(1 << choice);
-          dc_next_modifies = dc_modifies | (1 << choice);
-          dc_nexts = dcs;
-          dc_nexts[choice] = top;
-          // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
-          dc_loadeds_next = loaded_use_reload;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = top;
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
-        end
-        // No conflict with loops for dc0
-        `I_SETB0: begin
-          two_stage_loop_move = 1'b0;
-          choice = 2'b0;
-          dc_next_directions = dc_directions | (1 << choice);
-          dc_next_modifies = dc_modifies | (1 << choice);
-          dc_nexts = dcs;
-          dc_nexts[0] = top;
-          dc_loadeds_next = dc_loadeds;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = top;
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
+          // No conflict with loops for dc0
+          if (instruction == `I_SETF0) begin
+              two_stage_loop_move = 1'b0;
+              choice = 2'b0;
+              dc_next_directions = dc_directions & ~(1 << choice);
+              dc_next_modifies = dc_modifies | (1 << choice);
+              dc_nexts = dcs;
+              dc_nexts[0] = top;
+              dc_loadeds_next = dc_loadeds;
+              reload = 1'b1;
+              write_out = 1'b0;
+              write_address = {MAIN_ADDR_WIDTH{1'bx}};
+              write_value = {WORD_WIDTH{1'bx}};
+              read_address = top;
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end else begin
+              two_stage_loop_move = 1'b1;
+              choice = instruction[1:0];
+              dc_next_directions = dc_directions & ~(1 << choice);
+              dc_next_modifies = dc_modifies | (1 << choice);
+              dc_nexts = dcs;
+              dc_nexts[choice] = top;
+              // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
+              dc_loadeds_next = loaded_use_reload;
+              reload = 1'b1;
+              write_out = 1'b0;
+              write_address = {MAIN_ADDR_WIDTH{1'bx}};
+              write_value = {WORD_WIDTH{1'bx}};
+              read_address = top;
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end
         end
         `I_SETBZ: begin
-          two_stage_loop_move = 1'b1;
-          choice = instruction[1:0];
-          dc_next_directions = dc_directions | (1 << choice);
-          dc_next_modifies = dc_modifies | (1 << choice);
-          dc_nexts = dcs;
-          dc_nexts[choice] = top;
-          // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
-          dc_loadeds_next = loaded_use_reload;
-          reload = 1'b1;
-          write_out = 1'b0;
-          write_address = {MAIN_ADDR_WIDTH{1'bx}};
-          write_value = {WORD_WIDTH{1'bx}};
-          read_address = top;
-          conveyor_memload = 1'b0;
-          dstack_memload = 1'b0;
+          // No conflict with loops for dc0
+          if (instruction == `I_SETB0) begin
+              two_stage_loop_move = 1'b0;
+              choice = 2'b0;
+              dc_next_directions = dc_directions | (1 << choice);
+              dc_next_modifies = dc_modifies | (1 << choice);
+              dc_nexts = dcs;
+              dc_nexts[0] = top;
+              dc_loadeds_next = dc_loadeds;
+              reload = 1'b1;
+              write_out = 1'b0;
+              write_address = {MAIN_ADDR_WIDTH{1'bx}};
+              write_value = {WORD_WIDTH{1'bx}};
+              read_address = top;
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end else begin
+              two_stage_loop_move = 1'b1;
+              choice = instruction[1:0];
+              dc_next_directions = dc_directions | (1 << choice);
+              dc_next_modifies = dc_modifies | (1 << choice);
+              dc_nexts = dcs;
+              dc_nexts[choice] = top;
+              // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
+              dc_loadeds_next = loaded_use_reload;
+              reload = 1'b1;
+              write_out = 1'b0;
+              write_address = {MAIN_ADDR_WIDTH{1'bx}};
+              write_value = {WORD_WIDTH{1'bx}};
+              read_address = top;
+              conveyor_memload = 1'b0;
+              dstack_memload = 1'b0;
+          end
         end
         `I_READA: begin
           two_stage_loop_move = 1'b1;
