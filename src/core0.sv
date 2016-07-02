@@ -89,7 +89,7 @@ module core0(
   // Program memory interface
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [7:0] programmem_read_value;
-  output [((PROGRAM_ADDR_WIDTH+3)/4)-1:0] programmem_write_addess;
+  output [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addess;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
@@ -666,6 +666,7 @@ module core0(
 
       // Handle instruction specific state changes
       casez (instruction)
+        `I_IEN: interrupt_enables <= bus_selections;
         `I_ISET: begin
           interrupt_addresses <= interrupt_addresses_iset;
           interrupt_dc0s <= interrupt_dc0s_iset;
