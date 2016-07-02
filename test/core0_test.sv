@@ -8,7 +8,7 @@ module core0_test;
   localparam PROGRAM_ADDR_WIDTH = 5;
   localparam PROGRAM_SIZE = 1 << PROGRAM_ADDR_WIDTH;
   /// This is the width of the main memory address bus
-  localparam MAIN_ADDR_WIDTH = 2;
+  localparam MAIN_ADDR_WIDTH = 3;
   localparam MEMORY_SIZE = 1 << MAIN_ADDR_WIDTH;
   /// This is how many recursions are possible with the cstack
   localparam CSTACK_DEPTH = 16;
