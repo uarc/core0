@@ -42,8 +42,8 @@ module conveyor_control(
   output reg halt;
   output reg [FAULT_ADDR_WIDTH-1:0] fault;
 
-  reg [1:0][CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors;
-  reg [1:0][CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads;
+  reg [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] conveyors [0:1];
+  reg [CONVEYOR_ADDR_WIDTH-1:0] conveyor_heads [0:1];
 
   wire [CONVEYOR_SIZE-1:0][CONVEYOR_WIDTH-1:0] active_conveyor;
   wire [CONVEYOR_WIDTH-1:0] conveyor_access_slot;
@@ -93,7 +93,8 @@ module conveyor_control(
         conveyors[0][i] <= {1'b0, `F_NONE, {WORD_WIDTH{1'b0}}};
         conveyors[1][i] <= {1'b0, `F_NONE, {WORD_WIDTH{1'b0}}};
       end
-      conveyor_heads <= 0;
+      conveyor_heads[0] <= 0;
+      conveyor_heads[1] <= 0;
     end else begin
       if (load_last) begin
         if (interrupt_active) begin
