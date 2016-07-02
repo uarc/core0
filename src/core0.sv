@@ -663,6 +663,7 @@ module core0(
 
       // Handle instruction specific state changes
       casez (instruction)
+        `I_IEN: interrupt_enables <= bus_selections;
         `I_ISET: begin
           interrupt_addresses <= interrupt_addresses_iset;
           interrupt_dc0s <= interrupt_dc0s_iset;

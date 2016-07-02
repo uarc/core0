@@ -4,6 +4,11 @@ module core0_test;
   /// The log2 of the word width of the core
   localparam WORD_MAG = 5;
   localparam WORD_WIDTH = 1 << WORD_MAG;
+  /// Each set contains WORD_WIDTH amount of buses.
+  /// Not all of these buses need to be connected to an actual core.
+  localparam UARC_SETS = 1;
+  /// Must be less than or equal to UARC_SETS * WORD_WIDTH
+  localparam TOTAL_BUSES = 1;
   /// This is the width of the program memory address bus
   localparam PROGRAM_ADDR_WIDTH = 5;
   localparam PROGRAM_SIZE = 1 << PROGRAM_ADDR_WIDTH;
@@ -33,10 +38,59 @@ module core0_test;
   wire [WORD_WIDTH-1:0] mainmem_write_value;
   wire mainmem_we;
 
+  wire global_kill;
+  wire global_incept;
+  wire global_send;
+  wire global_stream;
+  wire [WORD_WIDTH-1:0] global_data;
+  wire [WORD_WIDTH-1:0] global_self_permission;
+  wire [WORD_WIDTH-1:0] global_self_address;
+  wire [WORD_WIDTH-1:0] global_incept_permission;
+  wire [WORD_WIDTH-1:0] global_incept_address;
+
+  // All of the signals for each bus for when this core is acting as the sender
+  wire [TOTAL_BUSES-1:0] sender_enables;
+  wire [TOTAL_BUSES-1:0] sender_kill_acks;
+  wire [TOTAL_BUSES-1:0] sender_incept_acks;
+  wire [TOTAL_BUSES-1:0] sender_send_acks;
+  wire [TOTAL_BUSES-1:0] sender_stream_acks;
+
+  // All of the signals for each bus for when this core is acting as the receiver
+  wire [TOTAL_BUSES-1:0] receiver_enables;
+  wire [TOTAL_BUSES-1:0] receiver_kills;
+  wire [TOTAL_BUSES-1:0] receiver_kill_acks;
+  wire [TOTAL_BUSES-1:0] receiver_incepts;
+  wire [TOTAL_BUSES-1:0] receiver_incept_acks;
+  reg [TOTAL_BUSES-1:0] receiver_sends;
+  wire [TOTAL_BUSES-1:0] receiver_send_acks;
+  wire [TOTAL_BUSES-1:0] receiver_streams;
+  wire [TOTAL_BUSES-1:0] receiver_stream_acks;
+  reg [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_datas;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_permissions;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_self_addresses;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_permissions;
+  wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] receiver_incept_addresses;
+
+  assign sender_kill_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_incept_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_send_acks = {TOTAL_BUSES{1'b0}};
+  assign sender_stream_acks = {TOTAL_BUSES{1'b0}};
+
+  assign receiver_enables = 1'b1;
+  assign receiver_kills = {TOTAL_BUSES{1'b0}};
+  assign receiver_incepts = {TOTAL_BUSES{1'b0}};
+  assign receiver_streams = {TOTAL_BUSES{1'b0}};
+  assign receiver_self_permissions = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_self_addresses = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_incept_permissions = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+  assign receiver_incept_addresses = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+
   reg sequential_test_success;
 
   core0_base #(
       .WORD_MAG(5),
+      .UARC_SETS(UARC_SETS),
+      .TOTAL_BUSES(TOTAL_BUSES),
       .PROGRAM_ADDR_WIDTH(PROGRAM_ADDR_WIDTH),
       .MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH),
       .CSTACK_DEPTH(CSTACK_DEPTH),
@@ -56,7 +110,38 @@ module core0_test;
       mainmem_write_addr,
       mainmem_read_value,
       mainmem_write_value,
-      mainmem_we
+      mainmem_we,
+
+      global_kill,
+      global_incept,
+      global_send,
+      global_stream,
+      global_data,
+      global_self_permission,
+      global_self_address,
+      global_incept_permission,
+      global_incept_address,
+
+      sender_enables,
+      sender_kill_acks,
+      sender_incept_acks,
+      sender_send_acks,
+      sender_stream_acks,
+
+      receiver_enables,
+      receiver_kills,
+      receiver_kill_acks,
+      receiver_incepts,
+      receiver_incept_acks,
+      receiver_sends,
+      receiver_send_acks,
+      receiver_streams,
+      receiver_stream_acks,
+      receiver_datas,
+      receiver_self_permissions,
+      receiver_self_addresses,
+      receiver_incept_permissions,
+      receiver_incept_addresses
     );
 
   initial begin
@@ -64,6 +149,8 @@ module core0_test;
     $dumpvars;
 
     $readmemh("bin/write.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -76,6 +163,8 @@ module core0_test;
     $display("write: %s", mainmem[0] == 0 ? "pass" : "fail");
 
     $readmemh("bin/add.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -88,6 +177,8 @@ module core0_test;
     $display("add: %s", core0_base.core0.dstack_top == 0 ? "pass" : "fail");
 
     $readmemh("bin/synchronous_read.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -100,6 +191,8 @@ module core0_test;
     $display("synchronous read: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
 
     $readmemh("bin/asynchronous_read.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -112,6 +205,8 @@ module core0_test;
     $display("asynchronous read: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
 
     $readmemh("bin/multi_async_read.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -125,6 +220,8 @@ module core0_test;
       (core0_base.core0.dstack_top == 2 && core0_base.core0.dstack_second == 1) ? "pass" : "fail");
 
     $readmemh("bin/rotate.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -140,6 +237,8 @@ module core0_test;
         core0_base.core0.dstack_third == 0) ? "pass" : "fail");
 
     $readmemh("bin/copy.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -155,6 +254,8 @@ module core0_test;
         core0_base.core0.dstack_third == 2) ? "pass" : "fail");
 
     $readmemh("bin/jump.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -168,6 +269,8 @@ module core0_test;
 
     $readmemh("bin/jump_immediate_prog.list", programmem);
     $readmemh("bin/jump_immediate_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -181,6 +284,8 @@ module core0_test;
 
     $readmemh("bin/add_immediate_prog.list", programmem);
     $readmemh("bin/add_immediate_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -194,6 +299,8 @@ module core0_test;
 
     $readmemh("bin/loop_immediate_prog.list", programmem);
     $readmemh("bin/loop_immediate_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -210,6 +317,8 @@ module core0_test;
 
     $readmemh("bin/loop_double_nested_prog.list", programmem);
     $readmemh("bin/loop_double_nested_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -223,6 +332,8 @@ module core0_test;
 
     $readmemh("bin/calli_prog.list", programmem);
     $readmemh("bin/calli_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -236,6 +347,8 @@ module core0_test;
 
     $readmemh("bin/calli_double_nested_prog.list", programmem);
     $readmemh("bin/calli_double_nested_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -249,6 +362,8 @@ module core0_test;
 
     $readmemh("bin/conditional_branching_prog.list", programmem);
     $readmemh("bin/conditional_branching_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     sequential_test_success = 1'b1;
@@ -268,6 +383,8 @@ module core0_test;
 
     $readmemh("bin/subroutine_dc0_prog.list", programmem);
     $readmemh("bin/subroutine_dc0_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -281,6 +398,8 @@ module core0_test;
 
     $readmemh("bin/subroutine_immediate_dc0_prog.list", programmem);
     $readmemh("bin/subroutine_immediate_dc0_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -294,6 +413,8 @@ module core0_test;
 
     $readmemh("bin/subroutine_dc0_restore_prog.list", programmem);
     $readmemh("bin/subroutine_dc0_restore_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -307,6 +428,8 @@ module core0_test;
 
     $readmemh("bin/writep_prog.list", programmem);
     $readmemh("bin/writep_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
     reset = 1;
@@ -317,6 +440,31 @@ module core0_test;
     end
 
     $display("writep: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
+
+    $readmemh("bin/interrupt_prog.list", programmem);
+    $readmemh("bin/interrupt_data.list", mainmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    // Give it a sufficient amount of cycles to set up and do other things
+    for (int i = 0; i < 8; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+    // Now interrupt it
+    receiver_sends = 1'b1;
+    receiver_datas = 8;
+    // Check to make sure it acknowledges the interrupt
+    #1 sequential_test_success = receiver_send_acks[0];
+    // Clock it once to enter the interrupt
+    clk = 0; #1; clk = 1; #1;
+    // Clock it again to run the first instruction
+    clk = 0; #1; clk = 1; #1;
+
+    $display("interrupt: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
   end
 
   genvar gi;
