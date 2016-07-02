@@ -52,8 +52,11 @@ module conveyor_control(
   wire conveyor_access_finished;
   wire [FAULT_ADDR_WIDTH-1:0] conveyor_access_fault;
 
-  assign active_conveyor = conveyors[interrupt_active];
-  assign conveyor_head = conveyor_heads[interrupt_active];
+  wire interrupt_conveyor_active;
+  assign interrupt_conveyor_active = interrupt_active || handle_interrupt;
+
+  assign active_conveyor = conveyors[interrupt_conveyor_active];
+  assign conveyor_head = conveyor_heads[interrupt_conveyor_active];
   assign conveyor_access = conveyor_head + instruction[3:0];
   assign conveyor_access_slot = (load_last && conveyor_access == conveyor_head) ?
     {1'b1, `F_NONE, mem_in} : active_conveyor[conveyor_access];
@@ -98,8 +101,7 @@ module conveyor_control(
         end else begin
           conveyors[0][conveyor_heads[0]] <= {1'b1, `F_NONE, mem_in};
         end
-      end
-      if (handle_interrupt) begin
+      end else if (handle_interrupt) begin
         conveyors[1][conveyor_back1] <= {1'b1, `F_NONE, interrupt_value};
         conveyors[1][conveyor_back2] <= {1'b1, `F_NONE, interrupt_bus};
         conveyor_heads[1] <= conveyor_back2;

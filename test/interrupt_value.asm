@@ -11,8 +11,8 @@ continue
 
 # Interrupt tag
 :interrupt
-# Inside the interrupt, only put an 88 on the stack
-88
+# Inside the interrupt, place the interrupt value on the stack (cv1)
+cv1
 
 # Align the segments
 alignp:0x3C,32

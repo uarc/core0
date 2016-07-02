@@ -317,7 +317,12 @@ module core0(
     .second(dstack_second),
     .carry,
     // Pad each DC individually with 0s so they can be added in the ALU
-    .dcs({{(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[3]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[2]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[1]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[0]}}}),
+    .dcs({
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[3]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[2]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[1]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[0]}
+    }),
     .dc_vals(dc_vals_next),
     .alu_a,
     .alu_ic,
@@ -509,7 +514,12 @@ module core0(
   dstack_control #(.WORD_WIDTH(WORD_WIDTH), .TOTAL_BUSES(TOTAL_BUSES)) dstack_control (
     .instruction,
     .halt,
-    .dcs({{(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[3]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[2]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[1]}}, {(WORD_WIDTH-MAIN_ADDR_WIDTH){dcs[0]}}}),
+    .dcs({
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[3]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[2]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[1]},
+      {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[0]}
+    }),
     .dc_vals(dc_vals_next),
     .iterators,
     .top(dstack_top),
@@ -613,7 +623,7 @@ module core0(
       lstack_ending <= ~0;
       mem_ctrl_conveyor_memload_last <= 0;
       mem_ctrl_dstack_memload_last <= 0;
-      
+
       // Initialize the global self permission
       global_self_permission <= 0;
     end else begin
