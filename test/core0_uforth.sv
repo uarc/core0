@@ -156,6 +156,7 @@ module core0_uforth;
     while (!$feof(STDIN)) begin
       reg [7:0] in_char;
       reg count;
+      integer rval;
       if (receiver_sends) begin
         if (receiver_send_acks) begin
           receiver_sends = 0;
@@ -173,7 +174,9 @@ module core0_uforth;
         end
       end
       if (sender_enables[0] && global_send) begin
-        $fputc(global_data, STDOUT);
+        rval = $fputc(global_data, STDOUT);
+        if (rval == -1)
+          $finish;
         sender_send_acks = 1;
       end else
         sender_send_acks = 0;
