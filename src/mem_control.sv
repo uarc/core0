@@ -298,6 +298,22 @@ module mem_control(
             dstack_memload = 1'b0;
           end
         end
+        `I_READI: begin
+          two_stage_loop_move = 1'b1;
+          choice = 2'b0;
+          dc_next_directions = dc_directions;
+          dc_next_modifies = dc_modifies;
+          dc_nexts = dcs;
+          dc_nexts[0] = dc_read_advances[0];
+          dc_loadeds_next = dc_loadeds;
+          reload = dstack_memload_last;
+          write_out = 1'b0;
+          write_address = {MAIN_ADDR_WIDTH{1'bx}};
+          write_value = {WORD_WIDTH{1'bx}};
+          read_address = dstack_memload_last ? dc_read_advances[0] : dc_val0;
+          conveyor_memload = 1'b0;
+          dstack_memload = !dstack_memload_last;
+        end
         `I_WRITEZ: begin
           // The write has absolutely no conflicts with a loop when its dc0
           if (instruction == `I_WRITE0) begin
@@ -424,7 +440,24 @@ module mem_control(
           conveyor_memload = !loop_final_stage;
           dstack_memload = 1'b0;
         end
-        `I_RWRITEZ: begin
+        `I_WRITEI: begin
+          two_stage_loop_move = 1'b0;
+          choice = 2'b0;
+          dc_next_directions = dc_directions;
+          dc_next_modifies = dc_modifies;
+          dc_nexts = dcs;
+          dc_nexts[0] = dc_read_advances[0];
+          dc_loadeds_next = loaded_chooser_reload;
+          // Only reload if the reloader finds an unloaded
+          reload = 1'b1;
+          write_out = 1'b1;
+          write_address = dc_val0;
+          write_value = top;
+          read_address = dc_read_advances[0];
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_RAWRITEZ: begin
           two_stage_loop_move = 1'b0;
           choice = reload_choice;
           dc_next_directions = dc_directions;
@@ -439,6 +472,42 @@ module mem_control(
           read_address = reload_address;
           conveyor_memload = 1'b0;
           dstack_memload = 1'b0;
+        end
+        `I_REWRITEZ: begin
+          // No conflict with loops for dc0
+          if (instruction == `I_REWRITE0) begin
+            two_stage_loop_move = 1'b0;
+            choice = 2'b0;
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            dc_nexts[0] = dc_read_advances[0];
+            dc_loadeds_next = dc_loadeds;
+            // Only reload if the reloader finds an unloaded
+            reload = 1'b1;
+            write_out = 1'b1;
+            write_address = alu_out;
+            write_value = second;
+            read_address = dc_read_advances[0];
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          end else begin
+            two_stage_loop_move = 1'b1;
+            choice = instruction[1:0];
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            dc_nexts[choice] = dc_read_advances[0];
+            // No stall is needed and it is possible we just reloaded a DC, so mark it as loaded
+            dc_loadeds_next = loaded_use_reload;
+            reload = 1'b1;
+            write_out = 1'b1;
+            write_address = alu_out;
+            write_value = second;
+            read_address = dc_read_advances[0];
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          end
         end
         `I_WRITE: begin
           two_stage_loop_move = 1'b0;

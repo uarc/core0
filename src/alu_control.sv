@@ -86,23 +86,9 @@ module alu_control(
         store_carry = 1;
         store_overflow = 1;
       end
-      `I_ADDC: begin
-        alu_a = second;
-        alu_ic = carry;
-        alu_opcode = `OP_ADD;
-        store_carry = 1;
-        store_overflow = 1;
-      end
       `I_SUB: begin
         alu_a = ~second;
         alu_ic = 1;
-        alu_opcode = `OP_ADD;
-        store_carry = 1;
-        store_overflow = 1;
-      end
-      `I_SUBC: begin
-        alu_a = ~second;
-        alu_ic = carry;
         alu_opcode = `OP_ADD;
         store_carry = 1;
         store_overflow = 1;
@@ -163,8 +149,15 @@ module alu_control(
         store_carry = 0;
         store_overflow = 0;
       end
-      `I_RWRITEZ: begin
+      `I_RAWRITEZ: begin
         alu_a = dcs[instruction[1:0]];
+        alu_ic = 0;
+        alu_opcode = `OP_ADD;
+        store_carry = 0;
+        store_overflow = 0;
+      end
+      `I_REWRITEZ: begin
+        alu_a = dc_vals[instruction[1:0]];
         alu_ic = 0;
         alu_opcode = `OP_ADD;
         store_carry = 0;

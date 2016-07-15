@@ -21,6 +21,7 @@ module core0(
   programmem_addr,
   programmem_read_value,
   programmem_write_addess,
+  programmem_write_mask,
   programmem_write_value,
   programmem_we,
 
@@ -90,6 +91,7 @@ module core0(
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [7:0] programmem_read_value;
   output [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addess;
+  output [WORD_WIDTH-1:0] programmem_write_mask;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
@@ -196,6 +198,9 @@ module core0(
   wire jump;
   // This tells the processor not to respond to any interrupts or advance the PC
   wire halt;
+
+  // Soft reset via reset instruction
+  wire soft_reset;
 
   // Signals for the alu
   wire [WORD_WIDTH-1:0] alu_a;
@@ -333,7 +338,7 @@ module core0(
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
     .clk,
-    .reset,
+    .reset(reset || soft_reset),
     .movement(dstack_movement),
     .next_top(dstack_next_top),
     .top(dstack_top),
@@ -438,7 +443,7 @@ module core0(
   );
 
   mem_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH), .WORD_WIDTH(WORD_WIDTH)) mem_control(
-    .reset,
+    .reset(reset || soft_reset),
     .instruction,
     .jump_immediate,
     .lstack_move_beginning,
@@ -495,7 +500,7 @@ module core0(
 
   conveyor_control #(.WORD_WIDTH(WORD_WIDTH), .CONVEYOR_ADDR_WIDTH(CONVEYOR_ADDR_WIDTH)) conveyor_control(
     .clk,
-    .reset,
+    .reset(reset || soft_reset),
     .instruction,
     .interrupt_active,
     .handle_interrupt,
@@ -582,7 +587,11 @@ module core0(
     mem_ctrl_interrupt_memory_conflict ||
     mem_ctrl_loop_memory_conflict;
 
-  assign programmem_write_value = dstack_second;
+  // TODO: Make this actually work regardless of word width (currently only 32-bit).
+  assign programmem_write_mask = instruction == `I_WRITEPI ?
+      {{(WORD_WIDTH-8){1'b0}}, 8'hFF} << (dstack_top[1:0] * 4) :
+      {WORD_WIDTH{1'b1}};
+  assign programmem_write_value = dstack_second << (dstack_top[1:0] * 4);
   assign programmem_we = instruction == `I_WRITEP;
   assign programmem_write_addess = dstack_top;
 
@@ -596,8 +605,10 @@ module core0(
   assign receiver_send_acks = servicing_interrupt << chosen_send_bus;
   assign receiver_stream_acks = {TOTAL_BUSES{1'b0}};
 
+  assign soft_reset = instruction == `I_RESET;
+
   always @(posedge clk) begin
-    if (reset) begin
+    if (reset || soft_reset) begin
       pc <= 0;
       dcs <= 0;
       dc_loadeds <= 0;
@@ -681,6 +692,7 @@ module core0(
           interrupt_addresses <= interrupt_addresses_iset;
           interrupt_dc0s <= interrupt_dc0s_iset;
         end
+        `I_SEB: bus_selections <= (1'b1 << dstack_top);
         `I_SLB: bus_selections[dstack_top] <= 1'b1;
         `I_USB: bus_selections[dstack_top] <= 1'b0;
         `I_SET: bus_selections <= bus_selections_set;

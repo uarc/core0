@@ -85,13 +85,14 @@
 `define I_SLB 8'h5B
 `define I_USB 8'h5C
 `define I_SEND 8'h5D
+`define I_WRITEI 8'h5E
 `define I_LOOPI 8'h5F
 `define I_RAWRITEZ 8'b011000ZZ
-`define I_REWRITEZ 8'b011001ZZ
 `define I_RAWRITE0 8'h60
 `define I_RAWRITE1 8'h61
 `define I_RAWRITE2 8'h62
-`define I_REWRITE3 8'h63
+`define I_RAWRITE3 8'h63
+`define I_REWRITEZ 8'b011001ZZ
 `define I_REWRITE0 8'h64
 `define I_REWRITE1 8'h65
 `define I_REWRITE2 8'h66
@@ -117,5 +118,6 @@
 `define I_MULU 8'h7A
 `define I_DIV 8'h7B
 `define I_DIVU 8'h7C
+`define I_RESET 8'h7F
 `define I_ROTZ 8'b10ZZZZZZ
 `define I_COPYZ 8'b11ZZZZZZ
