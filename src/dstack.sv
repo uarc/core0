@@ -10,7 +10,8 @@ module dstack(
   rot_addr,
   rot_val,
   rotate,
-  overflow
+  overflow,
+  underflow
 );
   /// The log2 of the depth of the stack
   parameter DEPTH_MAG = 7;
@@ -42,7 +43,7 @@ module dstack(
   /// The signal to rotate the stack is passed explicitly along with 00 for movement
   input rotate;
   /// A signal indicating if a value was lost at the bottom of the stack from pushing too much
-  output overflow;
+  output overflow, underflow;
 
   reg [DEPTH_MAG-1:0] depth;
   wire [DEPTH-1:0][WIDTH-1:0] elements;
@@ -57,6 +58,7 @@ module dstack(
   // We don't stop the overflow/data deletion, just trigger a fault, so no special code is necessary
   // When an overflow occurs the depth returns to 0, effectively automatically resetting the stack
   assign overflow = movement == 2'b01 && (depth == DEPTH - 1);
+  assign underflow = (movement == 2'b10 && (depth == 0)) || (movement == 2'b11 && (depth <= 1));
 
   genvar i;
   generate

@@ -224,6 +224,7 @@ module core0(
   wire [WORD_WIDTH-1:0] dstack_rot_val;
   wire dstack_rotate;
   wire dstack_overflow;
+  wire dstack_underflow;
 
   localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (MAIN_ADDR_WIDTH + 2) + 1;
 
@@ -347,7 +348,8 @@ module core0(
     .rot_addr(dstack_rot_addr),
     .rot_val(dstack_rot_val),
     .rotate(dstack_rotate),
-    .overflow(dstack_overflow)
+    .overflow(dstack_overflow),
+    .underflow(dstack_underflow)
   );
 
   stack #(.WIDTH(CSTACK_WIDTH), .DEPTH(CSTACK_DEPTH), .VISIBLES(1)) cstack(
@@ -557,7 +559,10 @@ module core0(
   // Whatever fault we will service next instruction (none if F_NONE)
   // TODO: Potentially add F_SEGFAULT by extending all memory addresses to word width and checking for bounds
   // or reserve F_SEGFAULT for memory management extension
-  assign fault = dstack_overflow ? `F_DATA_STACK_OVERFLOW : conveyor_fault;
+  assign fault =
+    dstack_overflow ? `F_DATA_STACK_OVERFLOW :
+    dstack_underflow ? `F_DATA_STACK_UNDERFLOW :
+    conveyor_fault;
 
   assign pc_advance = pc + 1;
   assign pc_next_nointerrupt =
