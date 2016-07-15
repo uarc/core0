@@ -591,7 +591,9 @@ module core0(
   assign programmem_write_mask = instruction == `I_WRITEPI ?
       {{(WORD_WIDTH-8){1'b0}}, 8'hFF} << (dstack_top[1:0] * 4) :
       {WORD_WIDTH{1'b1}};
-  assign programmem_write_value = dstack_second << (dstack_top[1:0] * 4);
+  assign programmem_write_value = instruction == `I_WRITEPI ?
+      (dstack_second << (dstack_top[1:0] * 4)) :
+      dstack_second;
   assign programmem_we = instruction == `I_WRITEP;
   assign programmem_write_addess = dstack_top;
 
