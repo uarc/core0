@@ -48,8 +48,7 @@ module dstack(
   wire [DEPTH-1:0][WIDTH-1:0] elements;
 
   assign elements[0] = top;
-  // Rotations start from value 1, not 0
-  assign rot_val = elements[rot_addr + 1'b1];
+  assign rot_val = elements[rot_addr];
 
   assign second = elements[1];
   assign third = elements[2];
@@ -61,14 +60,14 @@ module dstack(
 
   genvar i;
   generate
-    for (i = 1; i < DEPTH-2; i = i + 1) begin : DSTACK_ELEMENTS
+    for (i = 1; i < DEPTH-3; i = i + 1) begin : DSTACK_ELEMENTS
       dstack_element #(.WIDTH(WIDTH)) dstack_element(
         .clk,
         .movement(
           rotate ? (
             // Handle the rotate case
             // All values above and equal to the rotate address must be pushed down
-            i - 1 <= rot_addr ? 2'b01 : movement
+            i <= rot_addr ? 2'b01 : movement
           // The copy case is handled implicitly because all elements are pushed once
           ) : movement
         ),
@@ -87,7 +86,7 @@ module dstack(
       rotate ? (
         // Handle the rotate case
         // All values above and equal to the rotate address must be pushed down
-        DEPTH-2-1 <= rot_addr ? 2'b01 : movement
+        DEPTH-2 <= rot_addr ? 2'b01 : movement
       // The copy case is handled implicitly because all elements are pushed once
       ) : movement
     ),
@@ -103,7 +102,7 @@ module dstack(
       rotate ? (
         // Handle the rotate case
         // All values above and equal to the rotate address must be pushed down
-        DEPTH-1-1 <= rot_addr ? 2'b01 : movement
+        DEPTH-1 <= rot_addr ? 2'b01 : movement
       // The copy case is handled implicitly because all elements are pushed once
       ) : movement
     ),
