@@ -186,6 +186,8 @@ module core0(
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_nointerrupt;
   // This is asserted when an immediate jump is to happen
   wire jump_immediate;
+  // This is asserted when we are branching (there is a choice between jump locations)
+  wire branch;
   // This is asserted when a stack jump is to happen
   wire jump_stack;
   // This is asserted whenever the status normally indicates a call
@@ -448,6 +450,7 @@ module core0(
     .reset(reset || soft_reset),
     .instruction,
     .jump_immediate,
+    .branch,
     .lstack_move_beginning,
     .lstack_dc0,
     .top(dstack_top),
@@ -497,7 +500,8 @@ module core0(
     .carry,
     .overflow,
     .interrupt,
-    .jump_immediate
+    .jump_immediate,
+    .branch
   );
 
   conveyor_control #(.WORD_WIDTH(WORD_WIDTH), .CONVEYOR_ADDR_WIDTH(CONVEYOR_ADDR_WIDTH)) conveyor_control(

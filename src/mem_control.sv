@@ -5,6 +5,7 @@ module mem_control(
   reset,
   instruction,
   jump_immediate,
+  branch,
   lstack_move_beginning,
   lstack_dc0,
   top,
@@ -47,7 +48,7 @@ module mem_control(
 
   input reset;
   input [7:0] instruction;
-  input jump_immediate;
+  input jump_immediate, branch;
   input lstack_move_beginning;
   input [MAIN_ADDR_WIDTH-1:0] lstack_dc0;
   input [WORD_WIDTH-1:0] top;
@@ -99,6 +100,8 @@ module mem_control(
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_read_advances;
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_write_advances;
 
+  wire [MAIN_ADDR_WIDTH-1:0] dc0_branch_advance;
+
   // Signals for when the DC choice is reloaded
   wire [3:1] loaded_use_reload;
   // Signals for when the reloader choice is used
@@ -121,6 +124,8 @@ module mem_control(
       assign dc_write_advances[i] = dc_directions[i] ? dcs[i] - 1 : dcs[i] + 1;
     end
   endgenerate
+
+  assign dc0_branch_advance = dcs[0] + 2;
 
   assign loaded_use_reload = dc_loadeds | ((1 << choice) >> 1);
   assign loaded_chooser_reload = reload_unloaded ? (dc_loadeds | ((1 << reload_choice) >> 1)) : dc_loadeds;
@@ -566,6 +571,7 @@ module mem_control(
             dc_next_directions = dc_directions;
             dc_next_modifies = dc_modifies;
             dc_nexts = dcs;
+            // Advance by 1 or 2 depending on the type of jump (branching or not)
             dc_nexts[0] = dc_read_advances[0];
             dc_loadeds_next = dc_loadeds;
             reload = 1'b1;
@@ -607,6 +613,23 @@ module mem_control(
             write_address = {MAIN_ADDR_WIDTH{1'bx}};
             write_value = {WORD_WIDTH{1'bx}};
             read_address = stream_address;
+            conveyor_memload = 1'b0;
+            dstack_memload = 1'b0;
+          end else if (branch) begin
+            // This really doesn't make any sense, so just let the processor execute this in one cycle
+            two_stage_loop_move = 1'b0;
+            choice = 2'b0;
+            dc_next_directions = dc_directions;
+            dc_next_modifies = dc_modifies;
+            dc_nexts = dcs;
+            // Advance by 1 or 2 depending on the type of jump (branching or not)
+            dc_nexts[0] = dc0_branch_advance;
+            dc_loadeds_next = dc_loadeds;
+            reload = 1'b1;
+            write_out = 1'b0;
+            write_address = {MAIN_ADDR_WIDTH{1'bx}};
+            write_value = {WORD_WIDTH{1'bx}};
+            read_address = dc0_branch_advance;
             conveyor_memload = 1'b0;
             dstack_memload = 1'b0;
           end else begin
