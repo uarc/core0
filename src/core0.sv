@@ -4,7 +4,7 @@
 `include "../src/alu.sv"
 `include "../src/alu_control.sv"
 `include "../src/instructions.sv"
-`include "../src/jump_immediate_control.sv"
+`include "../src/flow_control.sv"
 `include "../src/mem_control.sv"
 `include "../src/faults.sv"
 `include "../src/conveyor_control.sv"
@@ -176,29 +176,29 @@ module core0(
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_set;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_sel;
 
-  // The instruction being executed this cycle
+  // The instruction being executed this cycle.
   wire [7:0] instruction;
-  // The PC + 1
+  // The PC + 1.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
-  // The next PC and the address from memory the next instruction will be loaded from
+  // The next PC and the address from memory the next instruction will be loaded from.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
-  // The next PC assuming no interrupt
+  // The next PC assuming no interrupt.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_nointerrupt;
-  // This is asserted when an immediate jump is to happen
+  // This is asserted when an immediate jump is to happen.
   wire jump_immediate;
-  // This is asserted when we are branching (there is a choice between jump locations)
+  // This is asserted when we are branching (there is a choice between jump locations).
   wire branch;
-  // This is asserted when a stack jump is to happen
+  // This is asserted when a stack jump is to happen.
   wire jump_stack;
-  // This is asserted whenever the status normally indicates a call
+  // This is asserted whenever the status normally indicates a call.
   wire call;
-  // This is asserted whenever we are returning from a call
+  // This is asserted whenever we are returning from a call.
   wire returning;
-  // This is asserted when we want to update the cstack top with new values
+  // This is asserted when we want to update the cstack top with new values.
   wire return_update;
-  // This is asserted whenever the PC is going to jump/move
+  // This is asserted whenever the PC is going to jump/move.
   wire jump;
-  // This tells the processor not to respond to any interrupts or advance the PC
+  // This tells the processor not to respond to any interrupts or advance the PC.
   wire halt;
 
   // Soft reset via reset instruction
@@ -410,7 +410,7 @@ module core0(
   );
 
   // Assign signals for lstack
-  assign lstack_push = instruction == `I_LOOPI || instruction == `I_LOOP;
+  assign lstack_push = instruction == `I_ILOOP || instruction == `I_LOOP;
   assign lstack_pop = !halt && (instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_total, lstack_dc0, lstack_index};
   assign lstack_after_ending = lstack_ending + 1;
