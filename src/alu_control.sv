@@ -36,10 +36,12 @@ module alu_control(
   output reg [3:0] alu_opcode;
   output reg store_carry, store_overflow;
 
-  wire [WORD_WIDTH-1:0] simm8, simm16;
+  wire [WORD_WIDTH-1:0] imm8, imm16, simm8, simm16;
 
   assign simm8 = {{(WORD_WIDTH-8){imm[7]}}, imm[7:0]};
   assign simm16 = {{(WORD_WIDTH-16){imm[15]}}, imm[15:0]};
+  assign imm8 = {{(WORD_WIDTH-8){1'b0}}, imm[7:0]};
+  assign imm16 = {{(WORD_WIDTH-16){1'b0}}, imm[15:0]};
 
   always @* begin
     casez (instruction)
@@ -61,7 +63,7 @@ module alu_control(
       end
       `I_REREADIZ: begin
         alu_a = dc_vals[instruction[1:0]];
-        alu_b = imm;
+        alu_b = imm8;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
@@ -109,7 +111,7 @@ module alu_control(
       end
       `I_ILOOP: begin
         alu_a = pc;
-        alu_b = imm;
+        alu_b = imm16;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
@@ -133,7 +135,7 @@ module alu_control(
       end
       `I_RAREADIZ: begin
         alu_a = dcs[instruction[1:0]];
-        alu_b = imm;
+        alu_b = imm8;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
@@ -157,7 +159,7 @@ module alu_control(
       end
       `I_RAWRITEIZ: begin
         alu_a = dcs[instruction[1:0]];
-        alu_b = imm;
+        alu_b = imm8;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
@@ -165,7 +167,7 @@ module alu_control(
       end
       `I_REWRITEIZ: begin
         alu_a = dc_vals[instruction[1:0]];
-        alu_b = imm;
+        alu_b = imm8;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
@@ -325,9 +327,9 @@ module alu_control(
       end
       `I_LSLI: begin
         alu_a = top;
-        alu_b = imm[7] ? -simm8 : imm;
+        alu_b = imm8[7] ? -simm8 : imm8;
         alu_ic = 1'bx;
-        alu_opcode = imm[7] ? `OP_LSR : `OP_LSL;
+        alu_opcode = imm8[7] ? `OP_LSR : `OP_LSL;
         store_carry = 1'b0;
         store_overflow = 1'b0;
       end
@@ -341,7 +343,7 @@ module alu_control(
       end
       `I_ASRI: begin
         alu_a = top;
-        alu_b = imm;
+        alu_b = imm8;
         alu_ic = 1'bx;
         alu_opcode = `OP_ASR;
         store_carry = 1'b0;
@@ -437,7 +439,7 @@ module alu_control(
       end
       `I_LOOP: begin
         alu_a = pc;
-        alu_b = imm;
+        alu_b = imm16;
         alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;

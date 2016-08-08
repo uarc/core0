@@ -252,8 +252,8 @@ module core0(
   wire [3:0] cstack_top_dc_modifies;
   wire cstack_top_interrupt;
 
-  // index (word) + total (word) + beginning (program) + ending (program) + dc0 (main)
-  localparam LSTACK_WIDTH = 2 * WORD_WIDTH + 2 * PROGRAM_ADDR_WIDTH + MAIN_ADDR_WIDTH;
+  // beginning (program) + ending (program) + infinite (flag) + total (word) + index (word)
+  localparam LSTACK_WIDTH = 2 * PROGRAM_ADDR_WIDTH + 1 + 2 * WORD_WIDTH;
 
   // Signals for the lstack
   wire lstack_push;
@@ -263,10 +263,9 @@ module core0(
   // lstack registers for active loop
   reg [WORD_WIDTH-1:0] lstack_index;
   reg [WORD_WIDTH-1:0] lstack_total;
+  reg lstack_infinite;
   reg [PROGRAM_ADDR_WIDTH-1:0] lstack_beginning;
   reg [PROGRAM_ADDR_WIDTH-1:0] lstack_ending;
-  reg [MAIN_ADDR_WIDTH-1:0] lstack_dc0;
-  wire [PROGRAM_ADDR_WIDTH-1:0] lstack_after_ending;
   wire [WORD_WIDTH-1:0] lstack_index_advance;
   wire lstack_next_iter;
   wire lstack_move_beginning;
@@ -401,6 +400,7 @@ module core0(
   endgenerate
   assign cstack_update_interrupt = cstack_top_interrupt;
 
+  // TODO: Make sure when the lstack is popped from the bottom a non-active loop is pushed on the stack.
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
     .clk,
     .push(lstack_push),
@@ -412,10 +412,9 @@ module core0(
   // Assign signals for lstack
   assign lstack_push = instruction == `I_ILOOP || instruction == `I_LOOP;
   assign lstack_pop = !halt && (instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter));
-  assign lstack_insert = {lstack_beginning, lstack_ending, lstack_total, lstack_dc0, lstack_index};
-  assign lstack_after_ending = lstack_ending + 1;
+  assign lstack_insert = {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index};
   assign lstack_index_advance = lstack_index + 1;
-  assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc == lstack_ending);
+  assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc_advance == lstack_ending);
   assign lstack_move_beginning = lstack_next_iter && !lstack_pop;
   assign iterators[0] = lstack_index;
   assign iterators[1] = lstack_tops[0][WORD_WIDTH-1:0];
@@ -554,7 +553,7 @@ module core0(
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
-  assign returning = instruction == `I_RET;
+  assign returning = instruction == `I_RETURN;
   // If we are doing a call or returning then the correct value will get updated anyways.
   // However, we otherwise need to do a return_update to update unset DCs so they will be preserved on return.
   assign return_update = !call && !returning;
@@ -590,7 +589,7 @@ module core0(
   assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
 
   assign halt =
-    ((interrupt_recv || instruction == `I_WAIT) && !chosen_send_on) ||
+    ((interrupt_recv || instruction == `I_INTWAIT) && !chosen_send_on) ||
     mem_ctrl_dstack_memload ||
     conveyor_halt ||
     mem_ctrl_interrupt_memory_conflict ||
@@ -650,24 +649,6 @@ module core0(
       global_self_permission <= 0;
     end else begin
       pc <= pc_next;
-      dc_mutate <= dc_ctrl_choice;
-      mem_ctrl_loop_memory_conflict_last <= mem_ctrl_loop_memory_conflict;
-      // If we are reloading LD0I, the code needs to explicitly handle the case here
-      // TODO: Possibly add an "actual_dc_next" vs "this_dc_next" if this logic is needed in multiple places
-      if (handle_interrupt) begin
-        dcs <= {dcs[3:1], interrupt_dc0};
-        dc_directions <= dc_ctrl_next_directions & 4'b1110;
-        dc_modifies <= dc_ctrl_next_modifies | 4'b0001;
-      end else if (instruction == `I_LD0I) begin
-        dcs <= {dc_nexts[3:1], dc_vals[0]};
-        dc_directions <= dc_ctrl_next_directions & 4'b1110;
-        dc_modifies <= dc_ctrl_next_modifies | 4'b0001;
-      end else begin
-        dcs <= dc_nexts;
-        dc_directions <= dc_ctrl_next_directions;
-        dc_modifies <= dc_ctrl_next_modifies;
-      end
-      dc_loadeds <= dc_loadeds_next;
       dc_vals <= dc_vals_next;
       dc_reload <= dc_ctrl_reload;
       dc_mutate <= dc_ctrl_choice;
@@ -686,7 +667,7 @@ module core0(
           interrupt_active <= 1'b0;
       // lstack top is stored in this module so manually handle the pop case
       if (lstack_pop)
-        {lstack_beginning, lstack_ending, lstack_total, lstack_dc0, lstack_index} <= lstack_tops[0];
+        {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index} <= lstack_tops[0];
       else if (lstack_next_iter)
         lstack_index <= lstack_index_advance;
       // Store carry when instructions produce it
@@ -698,8 +679,8 @@ module core0(
 
       // Handle instruction specific state changes
       casez (instruction)
-        `I_IEN: interrupt_enables <= bus_selections;
-        `I_ISET: begin
+        `I_INTEN: interrupt_enables <= bus_selections;
+        `I_INTSET: begin
           interrupt_addresses <= interrupt_addresses_iset;
           interrupt_dc0s <= interrupt_dc0s_iset;
         end
@@ -708,14 +689,14 @@ module core0(
         `I_USB: bus_selections[dstack_top] <= 1'b0;
         `I_SET: bus_selections <= bus_selections_set;
         `I_SEL: bus_selections <= bus_selections_sel;
-        `I_LOOPI: begin
+        `I_ILOOP: begin
           lstack_beginning <= pc_advance;
           lstack_ending <= dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0];
           lstack_total <= dstack_top;
           lstack_dc0 <= dc_nexts[0];
           lstack_index <= 0;
         end
-        `I_SETA: begin
+        `I_SETPA: begin
           global_incept_permission <= dstack_second;
           global_incept_address <= dstack_top;
         end
