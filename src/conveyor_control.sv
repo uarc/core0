@@ -74,7 +74,20 @@ module conveyor_control(
         halt = !conveyor_access_finished;
         fault = conveyor_access_fault;
       end
-      `I_READA: begin
+      // TODO: Eventually, resolve this to not be a conflict at all.
+      `I_READ: begin
+        // The architecture does not permit loading into the non-active conveyor after an interrupt happens
+        // Due to this the instruction needs to be stalled so it is ran again after the interrupt
+        halt = handle_interrupt;
+        fault = `F_NONE;
+      end
+      `I_REREADIZ: begin
+        // The architecture does not permit loading into the non-active conveyor after an interrupt happens
+        // Due to this the instruction needs to be stalled so it is ran again after the interrupt
+        halt = handle_interrupt;
+        fault = `F_NONE;
+      end
+      `I_REREADZ: begin
         // The architecture does not permit loading into the non-active conveyor after an interrupt happens
         // Due to this the instruction needs to be stalled so it is ran again after the interrupt
         halt = handle_interrupt;
@@ -112,8 +125,9 @@ module conveyor_control(
         conveyor_heads[0] <= conveyor_back2;
       end else begin
         casez (instruction)
-          `I_READA: conveyor_heads[interrupt_active] <= conveyor_back1;
-          default: ;
+          `I_READ: conveyor_heads[interrupt_active] <= conveyor_back1;
+          `I_REREADIZ: conveyor_heads[interrupt_active] <= conveyor_back1;
+          `I_REREADZ: conveyor_heads[interrupt_active] <= conveyor_back1;
         endcase
       end
     end

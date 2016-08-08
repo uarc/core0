@@ -27,8 +27,8 @@ module core0_test;
 
   reg clk, reset;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
-  reg [7:0] programmem_read_value;
-  wire [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addr;
+  reg [(8 + WORD_WIDTH)-1:0] programmem_read_value;
+  wire [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addr;
   wire [WORD_WIDTH-1:0] programmem_write_mask;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
@@ -158,11 +158,11 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 3; i++) begin
+    for (int i = 0; i < 10; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("write: %s", mainmem[0] == 0 ? "pass" : "fail");
+    $display("write: %s", mainmem[0] == 7 ? "pass" : "fail");
 
     $readmemh("bin/add.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
@@ -172,25 +172,11 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 5; i++) begin
+    for (int i = 0; i < 10; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
     $display("add: %s", core0_base.core0.dstack_top == 0 ? "pass" : "fail");
-
-    $readmemh("bin/synchronous_read.list", programmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 7; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("synchronous read: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
 
     $readmemh("bin/asynchronous_read.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
@@ -200,11 +186,11 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 7; i++) begin
+    for (int i = 0; i < 10; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("asynchronous read: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
+    $display("asynchronous read: %s", core0_base.core0.dstack_top == 7 ? "pass" : "fail");
 
     $readmemh("bin/multi_async_read.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
@@ -219,7 +205,7 @@ module core0_test;
     end
 
     $display("multi async read: %s",
-      (core0_base.core0.dstack_top == 2 && core0_base.core0.dstack_second == 1) ? "pass" : "fail");
+      (core0_base.core0.dstack_top == 8 && core0_base.core0.dstack_second == 7) ? "pass" : "fail");
 
     $readmemh("bin/rotate.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
@@ -229,7 +215,7 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 6; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
@@ -246,7 +232,7 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 5; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
@@ -269,8 +255,7 @@ module core0_test;
 
     $display("jump: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/jump_immediate_prog.list", programmem);
-    $readmemh("bin/jump_immediate_data.list", mainmem);
+    $readmemh("bin/jump_immediate.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -278,14 +263,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("jump immediate: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
+    $display("jump immediate: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/add_immediate_prog.list", programmem);
-    $readmemh("bin/add_immediate_data.list", mainmem);
+    $readmemh("bin/add_immediate.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -293,14 +277,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 2; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
     $display("add immediate: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/loop_immediate_prog.list", programmem);
-    $readmemh("bin/loop_immediate_data.list", mainmem);
+    $readmemh("bin/loop.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -308,17 +291,16 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 5; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("loop immediate: %s",
-      (core0_base.core0.dstack_top == 0 &&
+    $display("loop: %s",
+      (core0_base.core0.dstack_top == 2 &&
         core0_base.core0.dstack_second == 1 &&
         core0_base.core0.dstack_third == 0) ? "pass" : "fail");
 
-    $readmemh("bin/loop_double_nested_prog.list", programmem);
-    $readmemh("bin/loop_double_nested_data.list", mainmem);
+    $readmemh("bin/loop_double_nested.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -326,14 +308,14 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 31; i++) begin
+    for (int i = 0; i < 32; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
+    $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 &&
+      core0_base.core0.dstack_second == 1 ? "pass" : "fail");
 
-    $readmemh("bin/calli_prog.list", programmem);
-    $readmemh("bin/calli_data.list", mainmem);
+    $readmemh("bin/calli.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -341,14 +323,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 5; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("calli: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
+    $display("calli: %s", core0_base.core0.dstack_top == 11 && core0_base.core0.dstack_second == 10 ? "pass" : "fail");
 
-    $readmemh("bin/calli_double_nested_prog.list", programmem);
-    $readmemh("bin/calli_double_nested_data.list", mainmem);
+    $readmemh("bin/calli_double_nested.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -356,14 +337,14 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("calli double nested: %s", core0_base.core0.dstack_top == 3 ? "pass" : "fail");
+    $display("calli double nested: %s",
+      core0_base.core0.dstack_top == 11 && core0_base.core0.dstack_second == 10 ? "pass" : "fail");
 
-    $readmemh("bin/conditional_branching_prog.list", programmem);
-    $readmemh("bin/conditional_branching_data.list", mainmem);
+    $readmemh("bin/conditional_branching.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -372,19 +353,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 3; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
-    sequential_test_success = sequential_test_success && core0_base.core0.pc == 3;
-    for (int i = 0; i < 2; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-    sequential_test_success = sequential_test_success && core0_base.core0.pc == 8;
 
-    $display("conditional branching: %s", sequential_test_success ? "pass" : "fail");
+    $display("conditional branching: %s", core0_base.core0.dstack_top == 6 && core0_base.core0.dstack_second == 5 ? "pass" : "fail");
 
-    $readmemh("bin/subroutine_dc0_prog.list", programmem);
-    $readmemh("bin/subroutine_dc0_data.list", mainmem);
+    $readmemh("bin/writep.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -392,59 +367,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 6; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("subroutine dc0: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
+    $display("writep: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
 
-    $readmemh("bin/subroutine_immediate_dc0_prog.list", programmem);
-    $readmemh("bin/subroutine_immediate_dc0_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 5; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("subroutine immediate dc0: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
-
-    $readmemh("bin/subroutine_dc0_restore_prog.list", programmem);
-    $readmemh("bin/subroutine_dc0_restore_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 6; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("subroutine dc0 restore: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
-
-    $readmemh("bin/writep_prog.list", programmem);
-    $readmemh("bin/writep_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 5; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("writep: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
-
-    $readmemh("bin/interrupt_prog.list", programmem);
-    $readmemh("bin/interrupt_data.list", mainmem);
+    $readmemh("bin/interrupt.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -453,23 +382,27 @@ module core0_test;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
     // Give it a sufficient amount of cycles to set up and do other things
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
     // Now interrupt it
     receiver_sends = 1'b1;
-    receiver_datas = 8;
+    receiver_datas[0] = 88;
     // Check to make sure it acknowledges the interrupt
     #1 sequential_test_success = receiver_send_acks[0];
     // Clock it once to enter the interrupt
     clk = 0; #1; clk = 1; #1;
+    // Unassert the interrupt, now that it has been acknowledged
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    // Ensure it only acks on the cycle it accepts the interrupt.
+    #1 sequential_test_success = sequential_test_success && !receiver_send_acks[0];
     // Clock it again to run the first instruction
     clk = 0; #1; clk = 1; #1;
 
-    $display("interrupt: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
+    $display("interrupt: %s", sequential_test_success && core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/interrupt_value_prog.list", programmem);
-    $readmemh("bin/interrupt_value_data.list", mainmem);
+    $readmemh("bin/interrupt_value.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -478,40 +411,51 @@ module core0_test;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
     // Give it a sufficient amount of cycles to set up and do other things
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
     // Now interrupt it
     receiver_sends = 1'b1;
-    receiver_datas = 8;
+    receiver_datas[0] = 88;
     // Check to make sure it acknowledges the interrupt
     #1 sequential_test_success = receiver_send_acks[0];
     // Clock it once to enter the interrupt
     clk = 0; #1; clk = 1; #1;
+    // Unassert the interrupt, now that it has been acknowledged
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    // Ensure it only acks on the cycle it accepts the interrupt.
+    #1 sequential_test_success = sequential_test_success && !receiver_send_acks[0];
     // Clock it again to run the first instruction
     clk = 0; #1; clk = 1; #1;
 
-    $display("interrupt value: %s", sequential_test_success && core0_base.core0.dstack_top == 8 ? "pass" : "fail");
+    $display("interrupt value: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
   end
 
-  genvar gi;
-  wire [WORD_WIDTH/8-1:0][7:0] progmem_individuals;
-  wire [WORD_WIDTH/8-1:0][7:0] progmem_individual_masks;
+  wire [(8 + WORD_WIDTH)-1:0] full_read_value;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_values;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_masks;
+
+  genvar i;
   generate
-    for (gi = 0; gi < WORD_WIDTH/8; gi = gi + 1) begin : INDIVIDUAL_PMEM_LOOP
-      assign progmem_individuals[gi] = programmem_write_value[gi*8+7:gi*8];
-      assign progmem_individual_masks[gi] = programmem_write_mask[gi*8+7:gi*8];
+    for (i = 0; i < WORD_WIDTH/8 + 1; i = i + 1) begin : FULL_VALUE_LOOP
+      assign full_read_value[i*8+7:i*8] = programmem[programmem_addr + i];
+    end
+    for (i = 0; i < WORD_WIDTH/8; i = i + 1) begin : INDIVIDUAL_OCTET_LOOP
+      assign individual_write_values[i] = programmem_write_value[i*8+7:i*8];
+      assign individual_write_masks[i] = programmem_write_mask[i*8+7:i*8];
     end
   endgenerate
 
   always @(posedge clk) begin
     if (programmem_we) begin
       for (int j = 0; j < WORD_WIDTH/8; j++)
-        programmem[programmem_write_addr*(WORD_WIDTH/8) + j] <=
-          (programmem[programmem_write_addr*(WORD_WIDTH/8) + j] & (~progmem_individual_masks[j])) |
-          (progmem_individuals[j] & progmem_individual_masks[j]);
+        programmem[programmem_write_addr + j] <=
+          (individual_write_values[j] & individual_write_masks[j]) |
+          (programmem[programmem_write_addr + j] & ~individual_write_masks[j]);
     end
-    programmem_read_value <= programmem[programmem_addr];
+    for (int j = 0; j < WORD_WIDTH/8 + 1; j++)
+      programmem_read_value <= full_read_value;
     if (mainmem_we)
       mainmem[mainmem_write_addr] <= mainmem_write_value;
     mainmem_read_value <= mainmem[mainmem_read_addr];

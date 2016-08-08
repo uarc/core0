@@ -37,7 +37,7 @@ module dstack(
   /// The value under the second
   output [WIDTH-1:0] third;
   /// The last address which is pushed during a rotate
-  input [5:0] rot_addr;
+  input [4:0] rot_addr;
   /// The value rotated to the top in a rotate
   output [WIDTH-1:0] rot_val;
   /// The signal to rotate the stack is passed explicitly along with 00 for movement
