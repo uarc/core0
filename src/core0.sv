@@ -318,10 +318,9 @@ module core0(
     .oo(alu_oo)
   );
 
-  assign alu_b = dstack_top;
-
   alu_control #(.WORD_WIDTH(WORD_WIDTH)) alu_control(
     .instruction,
+    .top(dstack_top),
     .second(dstack_second),
     .carry,
     // Pad each DC individually with 0s so they can be added in the ALU
@@ -333,6 +332,7 @@ module core0(
     }),
     .dc_vals(dc_vals_next),
     .alu_a,
+    .alu_b,
     .alu_ic,
     .alu_opcode,
     .store_carry(alu_cntl_store_carry),
