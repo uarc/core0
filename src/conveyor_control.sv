@@ -115,7 +115,6 @@ module conveyor_control(
           `I_READ: conveyor_heads[interrupt_active] <= conveyor_back1;
           `I_REREADIZ: conveyor_heads[interrupt_active] <= conveyor_back1;
           `I_REREADZ: conveyor_heads[interrupt_active] <= conveyor_back1;
-          default: ;
         endcase
       end
     end

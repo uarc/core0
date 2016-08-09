@@ -10,6 +10,7 @@
 `include "../src/conveyor_control.sv"
 `include "../src/dstack_control.sv"
 `include "../src/dc_val_control.sv"
+`include "../src/pc_control.sv"
 
 /// This module defines UARC core0 with an arbitrary bus width.
 /// Modifying the bus width will also modify the UARC bus.
@@ -525,6 +526,12 @@ module core0(
     .rotate_addr(dstack_rot_addr)
   );
 
+  pc_control #(.WORD_WIDTH(WORD_WIDTH), .PROGRAM_ADDR_WIDTH(PROGRAM_ADDR_WIDTH)) pc_control (
+    .instruction,
+    .pc,
+    .pc_advance
+  );
+
   assign sender_enables = bus_selections;
 
   assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
@@ -543,7 +550,6 @@ module core0(
     dstack_underflow ? `F_DATA_STACK_UNDERFLOW :
     conveyor_fault;
 
-  assign pc_advance = pc + 1;
   assign pc_next_nointerrupt =
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
