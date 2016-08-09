@@ -158,7 +158,7 @@ module dstack_control(
       `I_GETA: next_top = self_address;
       `I_OR: next_top = alu_out;
       `I_XOR: next_top = alu_out;
-      `I_READA: next_top = second;
+      `I_READ: next_top = second;
       `I_CALL: next_top = second;
       `I_JMP: next_top = second;
       `I_INTSET: next_top = second;

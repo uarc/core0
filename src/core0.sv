@@ -78,18 +78,18 @@ module core0(
   parameter CSTACK_DEPTH = 2;
   /// This is how many loops can be nested with the lstack
   parameter LSTACK_DEPTH = 3;
-  /// Increasing this by 1 doubles the length of the conveyor buffer
+  /// Increasing this by 1 doubles the length of the conveyor buffer (dont decrease below 4)
   parameter CONVEYOR_ADDR_WIDTH = 4;
 
   localparam FAULT_ADDR_WIDTH = 3;
-  localparam TOTAL_FAULTS = 4;
+  localparam TOTAL_FAULTS = 5;
 
   input clk;
   input reset;
 
   // Program memory interface
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
-  input [7:0] programmem_read_value;
+  input [(8 + WORD_WIDTH)-1:0] programmem_read_value;
   output [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addess;
   output [WORD_WIDTH-1:0] programmem_write_mask;
   output [WORD_WIDTH-1:0] programmem_write_value;
@@ -141,18 +141,11 @@ module core0(
   reg [PROGRAM_ADDR_WIDTH-1:0] pc;
   reg [3:0][MAIN_ADDR_WIDTH-1:0] dcs;
   wire [3:0][MAIN_ADDR_WIDTH-1:0] dc_nexts;
-  // dc0 is always loaded, but dc1-3 may or may not be loaded at any given point in time
-  reg [3:1] dc_loadeds;
-  wire [3:1] dc_loadeds_next;
-  // Determines the direction of DC writes (0 - post-increment; 1 - pre-decrement)
-  reg [3:0] dc_directions;
-  // Indicates if this subroutine set the dcs disallowing them to be restored
-  reg [3:0] dc_modifies;
   reg [3:0][WORD_WIDTH-1:0] dc_vals;
   wire [3:0][WORD_WIDTH-1:0] dc_vals_next;
   // Indicates if a dc was advanced last cycle and a new value must be loaded from memory
   reg dc_reload;
-  // Which DC to mutate on the cycle following a DC movement where dc_advance is set
+  // Which DC to mutate on the cycle following a DC movement
   reg [1:0] dc_mutate;
 
   // Status bits
@@ -176,28 +169,26 @@ module core0(
 
   // The instruction being executed this cycle.
   wire [7:0] instruction;
-  // The PC + 1.
+  // The immediate value (if there is one).
+  wire [WORD_WIDTH-1:0] imm;
+  // The natural next PC (pc + 1, pc + 2, pc + 3, pc + 5)
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
-  // The next PC and the address from memory the next instruction will be loaded from.
-  wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
   // The next PC assuming no interrupt.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_nointerrupt;
-  // This is asserted when an immediate jump is to happen.
+  // The actual next PC. Program memory is loaded here.
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
+  // This is asserted when the processor is jumping to an absolute location from an immediate value.
   wire jump_immediate;
-  // This is asserted when we are branching (there is a choice between jump locations).
+  // This is asserted when we are branching to a relative location (alu_out).
   wire branch;
-  // This is asserted when a stack jump is to happen.
+  // This is asserted when the processor is jumping to an absolute location from the stack.
   wire jump_stack;
-  // This is asserted whenever the status normally indicates a call.
+  // This is asserted whenever there is a call.
   wire call;
   // This is asserted whenever we are returning from a call.
   wire returning;
-  // This is asserted when we want to update the cstack top with new values.
-  wire return_update;
-  // This is asserted whenever the PC is going to jump/move.
-  wire jump;
-  // This tells the processor not to respond to any interrupts or advance the PC.
-  wire halt;
+  // This tells the processor to return back to the current instruction on an interrupt.
+  wire interrupt_conflict;
 
   // Soft reset via reset instruction
   wire soft_reset;
@@ -212,7 +203,7 @@ module core0(
   wire alu_oo;
 
   // Signals for alu_control
-  wire alu_cntl_store_carry, alu_cntl_store_overflow;
+  wire alu_control_store_carry, alu_control_store_overflow;
 
   // Signals for the dstack
   wire [1:0] dstack_movement;
@@ -491,7 +482,7 @@ module core0(
     .dc_vals_next
   );
 
-  jump_immediate_control #(.WORD_WIDTH(WORD_WIDTH)) jump_immediate_control(
+  flow_control #(.WORD_WIDTH(WORD_WIDTH)) flow_control(
     .instruction,
     .top(dstack_top),
     .second(dstack_second),
@@ -499,6 +490,7 @@ module core0(
     .overflow,
     .interrupt,
     .jump_immediate,
+    .jump_stack,
     .branch
   );
 
@@ -557,7 +549,7 @@ module core0(
   // However, we otherwise need to do a return_update to update unset DCs so they will be preserved on return.
   assign return_update = !call && !returning;
 
-  assign instruction = programmem_read_value;
+  assign {imm, instruction} = programmem_read_value;
   // Whatever fault we will service next instruction (none if F_NONE)
   // TODO: Potentially add F_SEGFAULT by extending all memory addresses to word width and checking for bounds
   // or reserve F_SEGFAULT for memory management extension
