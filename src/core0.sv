@@ -309,9 +309,11 @@ module core0(
 
   alu_control #(.WORD_WIDTH(WORD_WIDTH)) alu_control(
     .instruction,
+    .imm,
     .top(dstack_top),
     .second(dstack_second),
     .carry,
+    .pc({{(WORD_WIDTH-PROGRAM_ADDR_WIDTH){1'b0}}, pc}),
     // Pad each DC individually with 0s so they can be added in the ALU
     .dcs({
       {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[3]},
@@ -324,8 +326,8 @@ module core0(
     .alu_b,
     .alu_ic,
     .alu_opcode,
-    .store_carry(alu_cntl_store_carry),
-    .store_overflow(alu_cntl_store_overflow)
+    .store_carry(alu_control_store_carry),
+    .store_overflow(alu_control_store_overflow)
   );
 
   dstack #(.DEPTH_MAG(7), .WIDTH(WORD_WIDTH)) dstack(
@@ -461,6 +463,10 @@ module core0(
   );
 
   dc_val_control #(.WORD_WIDTH(WORD_WIDTH)) dc_val_control(
+    .instruction,
+    .imm,
+    .top(dstack_top),
+    .second(dstack_second),
     .dc_vals,
     .dc_reload,
     .dc_mutate,
@@ -500,6 +506,7 @@ module core0(
 
   dstack_control #(.WORD_WIDTH(WORD_WIDTH), .TOTAL_BUSES(TOTAL_BUSES)) dstack_control (
     .instruction,
+    .imm,
     .halt,
     .dcs({
       {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[3]},
@@ -648,10 +655,10 @@ module core0(
       else if (lstack_next_iter)
         lstack_index <= lstack_index_advance;
       // Store carry when instructions produce it
-      if (alu_cntl_store_carry)
+      if (alu_control_store_carry)
         carry <= alu_oc;
       // Store overflow when instructions produce it
-      if (alu_cntl_store_overflow)
+      if (alu_control_store_overflow)
         overflow <= alu_oo;
 
       // Handle instruction specific state changes

@@ -26,7 +26,7 @@ module alu_control(
   input [WORD_WIDTH-1:0] top;
   input [WORD_WIDTH-1:0] second;
   input carry;
-  input [3:0][WORD_WIDTH-1:0] pc;
+  input [WORD_WIDTH-1:0] pc;
   input [3:0][WORD_WIDTH-1:0] dcs;
   input [3:0][WORD_WIDTH-1:0] dc_vals;
 
