@@ -84,6 +84,8 @@ module pc_control(
       `I_RESET: pc_advance = pc_advance_imm0;
       `I_DDROP: pc_advance = pc_advance_imm0;
       `I_ADDI: pc_advance = pc_advance_immword;
+      `I_ADDI8: pc_advance = pc_advance_imm8;
+      `I_ADDI16: pc_advance = pc_advance_imm16;
       `I_SUBI: pc_advance = pc_advance_immword;
       `I_LSLI: pc_advance = pc_advance_imm8;
       `I_CSLI: pc_advance = pc_advance_imm8;

@@ -317,6 +317,22 @@ module alu_control(
         store_carry = 1'b1;
         store_overflow = 1'b1;
       end
+      `I_ADDI8: begin
+        alu_a = simm8;
+        alu_b = top;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b1;
+        store_overflow = 1'b1;
+      end
+      `I_ADDI16: begin
+        alu_a = simm16;
+        alu_b = top;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b1;
+        store_overflow = 1'b1;
+      end
       `I_SUBI: begin
         alu_a = imm;
         alu_b = ~top;

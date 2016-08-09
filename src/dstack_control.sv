@@ -137,6 +137,8 @@ module dstack_control(
       `I_RESET: next_top = {WORD_WIDTH{1'bx}};
       `I_DDROP: next_top = third;
       `I_ADDI: next_top = alu_out;
+      `I_ADDI8: next_top = alu_out;
+      `I_ADDI16: next_top = alu_out;
       `I_SUBI: next_top = alu_out;
       `I_LSLI: next_top = alu_out;
       `I_CSLI: next_top = alu_out;
