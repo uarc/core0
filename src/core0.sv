@@ -218,28 +218,19 @@ module core0(
   wire dstack_overflow;
   wire dstack_underflow;
 
-  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 4 * (MAIN_ADDR_WIDTH + 2) + 1;
+  localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 1;
 
   // Signals for the cstack
   wire cstack_push;
   wire cstack_pop;
   // cstack insert signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_insert_progaddr;
-  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_insert_dcs;
-  wire [3:0] cstack_insert_dc_directions;
-  wire [3:0] cstack_insert_dc_modifies;
   wire cstack_insert_interrupt;
   // cstack insert on return_update signal
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_update_progaddr;
-  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_update_dcs;
-  wire [3:0] cstack_update_dc_directions;
-  wire [3:0] cstack_update_dc_modifies;
   wire cstack_update_interrupt;
   // cstack top signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
-  wire [3:0][MAIN_ADDR_WIDTH-1:0] cstack_top_dcs;
-  wire [3:0] cstack_top_dc_directions;
-  wire [3:0] cstack_top_dc_modifies;
   wire cstack_top_interrupt;
 
   // beginning (program) + ending (program) + infinite (flag) + total (word) + index (word)
@@ -271,7 +262,6 @@ module core0(
   // Any time an interrupt is being serviced at all this cycle
   wire servicing_interrupt;
   wire [PROGRAM_ADDR_WIDTH-1:0] chosen_interrupt_address;
-  wire [MAIN_ADDR_WIDTH-1:0] interrupt_dc0;
   wire [WORD_WIDTH-1:0] chosen_interrupt_value;
 
   // Signals for mem_control
@@ -281,9 +271,7 @@ module core0(
   wire [1:0] dc_control_choice;
   wire mem_control_conveyor_memload;
   wire mem_control_dstack_memload;
-  wire mem_control_interrupt_memory_conflict;
-  wire mem_control_loop_memory_conflict;
-  reg mem_control_conveyor_memload_last, mem_control_dstack_memload_last, mem_control_loop_memory_conflict_last;
+  reg mem_control_conveyor_memload_last, mem_control_dstack_memload_last;
 
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   // The first bit indicates if the word is finished/complete
@@ -349,20 +337,8 @@ module core0(
     .clk,
     .push(cstack_push),
     .pop(cstack_pop),
-    .insert({
-      cstack_insert_progaddr,
-      cstack_insert_dcs,
-      cstack_insert_dc_directions,
-      cstack_insert_dc_modifies,
-      cstack_insert_interrupt
-    }),
-    .tops({
-      cstack_top_progaddr,
-      cstack_top_dcs,
-      cstack_top_dc_directions,
-      cstack_top_dc_modifies,
-      cstack_top_interrupt
-    })
+    .insert({cstack_insert_progaddr, cstack_insert_interrupt}),
+    .tops({cstack_top_progaddr, cstack_top_interrupt})
   );
 
   // Assign signals for cstack
@@ -376,20 +352,9 @@ module core0(
     return_update ? cstack_update_progaddr :
     // Otherwise calls of various kinds return to the instruction following the present
     pc_advance;
-  assign cstack_insert_dcs = return_update ? cstack_update_dcs : dc_nexts;
-  assign cstack_insert_dc_directions = return_update ? cstack_update_dc_directions : dc_control_next_directions;
-  assign cstack_insert_dc_modifies = return_update ? cstack_update_dc_modifies : dc_control_next_modifies;
   assign cstack_insert_interrupt = return_update ? cstack_update_interrupt : handle_interrupt;
   // cstack update
   assign cstack_update_progaddr = cstack_top_progaddr;
-  generate
-    for (i = 0; i < 4; i = i + 1) begin: CSTACK_UPDATE_GENERATE
-      assign {cstack_update_dcs[i], cstack_update_dc_directions[i], cstack_update_dc_modifies[i]} =
-        dc_control_next_modifies[i] ?
-          {cstack_top_dcs[i], cstack_top_dc_directions[i], cstack_top_dc_modifies[i]} :
-          {dc_nexts[i], dc_control_next_directions[i], dc_control_next_modifies[i]};
-    end
-  endgenerate
   assign cstack_update_interrupt = cstack_top_interrupt;
 
   // TODO: Make sure when the lstack is popped from the bottom a non-active loop is pushed on the stack.
@@ -579,19 +544,25 @@ module core0(
   assign halt =
     ((interrupt_recv || instruction == `I_INTWAIT) && !chosen_send_on) ||
     mem_control_dstack_memload ||
-    conveyor_halt ||
-    mem_control_interrupt_memory_conflict ||
-    mem_control_loop_memory_conflict;
+    conveyor_halt;
 
-  // TODO: Make this actually work regardless of word width (currently only 32-bit).
-  assign programmem_write_mask = instruction == `I_WRITEPI ?
-      {{(WORD_WIDTH-8){1'b0}}, 8'hFF} << (dstack_top[1:0] * 4) :
+  // TODO: Separate this into its own module for readability.
+  assign programmem_write_mask = instruction == `I_WRITEPO ?
+      {{(WORD_WIDTH-8){1'b0}}, 8'hFF} :
       {WORD_WIDTH{1'b1}};
-  assign programmem_write_value = instruction == `I_WRITEPI ?
-      (dstack_second << (dstack_top[1:0] * 4)) :
+  assign programmem_write_value =
+      instruction == `I_WRITEPI ? dstack_top :
+      instruction == `I_WRITEPRI ? dstack_top :
       dstack_second;
-  assign programmem_we = instruction == `I_WRITEP;
-  assign programmem_write_addess = dstack_top;
+  assign programmem_we =
+      instruction == `I_WRITEP ||
+      instruction == `I_WRITEPO ||
+      instruction == `I_WRITEPI ||
+      instruction == `I_WRITEPRI;
+  assign programmem_write_addess =
+      instruction == `I_WRITEPI ? imm[PROGRAM_ADDR_WIDTH-1:0] :
+      instruction == `I_WRITEPRI ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
+      dstack_top[PROGRAM_ADDR_WIDTH-1:0];
 
   assign global_kill = 1'b0;
   assign global_incept = 1'b0;
