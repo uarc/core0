@@ -174,9 +174,9 @@ module alu_control(
         store_overflow = 1'b0;
       end
       `I_REREADZ: begin
-        alu_a = dcs[instruction[1:0]];
-        alu_b = simm8;
-        alu_ic = 1'b1;
+        alu_a = dc_vals[instruction[1:0]];
+        alu_b = top;
+        alu_ic = 1'b0;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
         store_overflow = 1'b0;

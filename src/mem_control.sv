@@ -142,6 +142,83 @@ module mem_control(
           conveyor_memload = 1'b0;
           dstack_memload = 1'b0;
         end
+        `I_RAWRITEIZ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b1;
+          write_address = alu_out[MAIN_ADDR_WIDTH-1:0];
+          write_value = top;
+          read_address = {MAIN_ADDR_WIDTH{1'bx}};
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_REWRITEIZ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b1;
+          write_address = alu_out[MAIN_ADDR_WIDTH-1:0];
+          write_value = top;
+          read_address = {MAIN_ADDR_WIDTH{1'bx}};
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_REREADZ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b0;
+          write_address = {MAIN_ADDR_WIDTH{1'bx}};
+          write_value = {WORD_WIDTH{1'bx}};
+          read_address = alu_out[MAIN_ADDR_WIDTH-1:0];
+          conveyor_memload = 1'b1;
+          dstack_memload = 1'b0;
+        end
+        `I_REWRITEZ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b1;
+          write_address = alu_out[MAIN_ADDR_WIDTH-1:0];
+          write_value = second;
+          read_address = {MAIN_ADDR_WIDTH{1'bx}};
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_RAWRITEZ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b1;
+          write_address = alu_out[MAIN_ADDR_WIDTH-1:0];
+          write_value = second;
+          read_address = {MAIN_ADDR_WIDTH{1'bx}};
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_WRITE: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b1;
+          write_address = top;
+          write_value = second;
+          read_address = {MAIN_ADDR_WIDTH{1'bx}};
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
+        `I_READ: begin
+          reload = 1'b0;
+          choice = 2'bx;
+          dc_nexts = dcs;
+          write_out = 1'b0;
+          write_address = {MAIN_ADDR_WIDTH{1'bx}};
+          write_value = {WORD_WIDTH{1'bx}};
+          read_address = top[MAIN_ADDR_WIDTH-1:0];
+          conveyor_memload = 1'b1;
+          dstack_memload = 1'b0;
+        end
         default: begin
           if (stream_in) begin
             reload = 1'b0;

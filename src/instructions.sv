@@ -30,6 +30,7 @@
 `define I_WRITEPREZ 8'b010000ZZ
 `define I_WRITEPSTZ 8'b010001ZZ
 `define I_SETZ 8'b010010ZZ
+`define I_RAWRITEIM 6'b010011
 `define I_RAWRITEIZ 8'b010011ZZ
 `define I_REWRITEIZ 8'b010100ZZ
 `define I_REREADZ 8'b010101ZZ
@@ -42,6 +43,7 @@
 `define I_ASR 8'h5E
 `define I_AND 8'h5F
 `define I_REWRITEZ 8'b011000ZZ
+`define I_RAWRITEM 6'b011001
 `define I_RAWRITEZ 8'b011001ZZ
 `define I_WRITE 8'h68
 `define I_WRITEP 8'h69
@@ -101,7 +103,7 @@
 //`define I_RESERVED 8'h9F
 `define I_OR 8'hA0
 `define I_XOR 8'hA1
-`define I_READA 8'hA2
+`define I_READ 8'hA2
 `define I_CALL 8'hA3
 `define I_JMP 8'hA4
 `define I_INTSET 8'hA5
