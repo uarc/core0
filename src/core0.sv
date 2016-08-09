@@ -526,7 +526,7 @@ module core0(
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
     returning ? cstack_top_progaddr :
-    jump_immediate ? dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0] :
+    jump_immediate ? imm :
     jump_stack ? dstack_top :
     lstack_pop ? lstack_ending :
     lstack_next_iter ? lstack_beginning :

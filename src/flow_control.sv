@@ -101,7 +101,7 @@ module flow_control(
         jump_immediate = 1'b0;
         jump_stack = 1'b1;
       end
-      `I_JMPI: begin
+      `I_JMP: begin
         branch = 1'b0;
         jump_immediate = 1'b0;
         jump_stack = 1'b1;
