@@ -163,7 +163,7 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] bus_selections;
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
-  wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_iset;
+  wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_intset;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_set;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_sel;
 
@@ -274,15 +274,15 @@ module core0(
   wire [WORD_WIDTH-1:0] chosen_interrupt_value;
 
   // Signals for mem_control
-  wire [3:0] dc_ctrl_next_directions;
-  wire [3:0] dc_ctrl_next_modifies;
-  wire dc_ctrl_reload;
-  wire [1:0] dc_ctrl_choice;
-  wire mem_ctrl_conveyor_memload;
-  wire mem_ctrl_dstack_memload;
-  wire mem_ctrl_interrupt_memory_conflict;
-  wire mem_ctrl_loop_memory_conflict;
-  reg mem_ctrl_conveyor_memload_last, mem_ctrl_dstack_memload_last, mem_ctrl_loop_memory_conflict_last;
+  wire [3:0] dc_control_next_directions;
+  wire [3:0] dc_control_next_modifies;
+  wire dc_control_reload;
+  wire [1:0] dc_control_choice;
+  wire mem_control_conveyor_memload;
+  wire mem_control_dstack_memload;
+  wire mem_control_interrupt_memory_conflict;
+  wire mem_control_loop_memory_conflict;
+  reg mem_control_conveyor_memload_last, mem_control_dstack_memload_last, mem_control_loop_memory_conflict_last;
 
   localparam CONVEYOR_SIZE = 1 << CONVEYOR_ADDR_WIDTH;
   // The first bit indicates if the word is finished/complete
@@ -374,17 +374,17 @@ module core0(
     // Otherwise calls of various kinds return to the instruction following the present
     pc_advance;
   assign cstack_insert_dcs = return_update ? cstack_update_dcs : dc_nexts;
-  assign cstack_insert_dc_directions = return_update ? cstack_update_dc_directions : dc_ctrl_next_directions;
-  assign cstack_insert_dc_modifies = return_update ? cstack_update_dc_modifies : dc_ctrl_next_modifies;
+  assign cstack_insert_dc_directions = return_update ? cstack_update_dc_directions : dc_control_next_directions;
+  assign cstack_insert_dc_modifies = return_update ? cstack_update_dc_modifies : dc_control_next_modifies;
   assign cstack_insert_interrupt = return_update ? cstack_update_interrupt : handle_interrupt;
   // cstack update
   assign cstack_update_progaddr = cstack_top_progaddr;
   generate
     for (i = 0; i < 4; i = i + 1) begin: CSTACK_UPDATE_GENERATE
       assign {cstack_update_dcs[i], cstack_update_dc_directions[i], cstack_update_dc_modifies[i]} =
-        dc_ctrl_next_modifies[i] ?
+        dc_control_next_modifies[i] ?
           {cstack_top_dcs[i], cstack_top_dc_directions[i], cstack_top_dc_modifies[i]} :
-          {dc_nexts[i], dc_ctrl_next_directions[i], dc_ctrl_next_modifies[i]};
+          {dc_nexts[i], dc_control_next_directions[i], dc_control_next_modifies[i]};
     end
   endgenerate
   assign cstack_update_interrupt = cstack_top_interrupt;
@@ -419,9 +419,8 @@ module core0(
             (receiver_sends[i] & interrupt_enables[i/WORD_WIDTH][i%WORD_WIDTH])
         );
 
-      assign {interrupt_addresses_iset[i], interrupt_dc0s_iset[i]} = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
-        {dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0], dstack_top[MAIN_ADDR_WIDTH-1:0]} :
-        {interrupt_addresses[i], interrupt_dc0s[i]};
+      assign interrupt_addresses_intset[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
+        dstack_top[MAIN_ADDR_WIDTH-1:0] : interrupt_addresses[i];
 
       assign bus_selections_set[i] = (i / WORD_WIDTH == dstack_top) ? dstack_second[i % WORD_WIDTH] : 1'b0;
     end
@@ -438,40 +437,26 @@ module core0(
   mem_control #(.MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH), .WORD_WIDTH(WORD_WIDTH)) mem_control(
     .reset(reset || soft_reset),
     .instruction,
-    .jump_immediate,
-    .branch,
-    .lstack_move_beginning,
-    .lstack_dc0,
     .top(dstack_top),
     .second(dstack_second),
     .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
-    .handle_interrupt,
-    .interrupt_dc0,
-    .conveyor_memload_last(mem_ctrl_conveyor_memload_last),
-    .dstack_memload_last(mem_ctrl_dstack_memload_last),
-    .loop_memory_conflict_last(mem_ctrl_loop_memory_conflict_last),
+    // TODO: Make stream controller.
+    .stream_in(1'b0),
+    .stream_in_value({WORD_WIDTH{1'bx}}),
+    .stream_out(1'b0),
+    .stream_address({MAIN_ADDR_WIDTH{1'bx}}),
+    .conveyor_memload_last(mem_control_conveyor_memload_last),
+    .dstack_memload_last(mem_control_dstack_memload_last),
     .dcs,
-    .dc_loadeds,
-    .dc_val0(dc_vals_next[0]),
-    .dc_directions,
-    .dc_modifies,
-    .return_dcs(cstack_top_dcs),
-    .return_dc_directions(cstack_top_dc_directions),
-    .return_dc_modifies(cstack_top_dc_modifies),
     .dc_nexts,
-    .dc_loadeds_next,
-    .dc_next_directions(dc_ctrl_next_directions),
-    .dc_next_modifies(dc_ctrl_next_modifies),
     .write_out(mainmem_we),
     .write_address(mainmem_write_addr),
     .write_value(mainmem_write_value),
     .read_address(mainmem_read_addr),
-    .conveyor_memload(mem_ctrl_conveyor_memload),
-    .dstack_memload(mem_ctrl_dstack_memload),
-    .interrupt_memory_conflict(mem_ctrl_interrupt_memory_conflict),
-    .loop_memory_conflict(mem_ctrl_loop_memory_conflict),
-    .reload(dc_ctrl_reload),
-    .choice(dc_ctrl_choice)
+    .conveyor_memload(mem_control_conveyor_memload),
+    .dstack_memload(mem_control_dstack_memload),
+    .reload(dc_control_reload),
+    .choice(dc_control_choice)
   );
 
   dc_val_control #(.WORD_WIDTH(WORD_WIDTH)) dc_val_control(
@@ -503,7 +488,7 @@ module core0(
     .servicing_interrupt,
     .interrupt_bus(chosen_send_bus),
     .interrupt_value(chosen_interrupt_value),
-    .load_last(mem_ctrl_conveyor_memload_last),
+    .load_last(mem_control_conveyor_memload_last),
     .mem_in(mainmem_read_value),
     .conveyor_value,
     .conveyor_back1,
@@ -565,7 +550,7 @@ module core0(
     returning ? cstack_top_progaddr :
     jump_immediate ? dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top :
-    lstack_pop ? lstack_after_ending :
+    lstack_pop ? lstack_ending :
     lstack_next_iter ? lstack_beginning :
     pc_advance;
   assign pc_next = reset ? {PROGRAM_ADDR_WIDTH{1'b0}} :
@@ -576,15 +561,14 @@ module core0(
   assign interrupt_recv = instruction == `I_RECV;
   assign servicing_interrupt = chosen_send_on && !interrupt_active;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
-  assign interrupt_dc0 = interrupt_dc0s[chosen_send_bus];
   assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
 
   assign halt =
     ((interrupt_recv || instruction == `I_INTWAIT) && !chosen_send_on) ||
-    mem_ctrl_dstack_memload ||
+    mem_control_dstack_memload ||
     conveyor_halt ||
-    mem_ctrl_interrupt_memory_conflict ||
-    mem_ctrl_loop_memory_conflict;
+    mem_control_interrupt_memory_conflict ||
+    mem_control_loop_memory_conflict;
 
   // TODO: Make this actually work regardless of word width (currently only 32-bit).
   assign programmem_write_mask = instruction == `I_WRITEPI ?
@@ -612,10 +596,7 @@ module core0(
     if (reset || soft_reset) begin
       pc <= 0;
       dcs <= 0;
-      dc_loadeds <= 0;
       dc_vals <= 0;
-      dc_directions <= 0;
-      dc_modifies <= 0;
       dc_mutate <= 0;
       dc_reload <= 1'b1;
 
@@ -631,27 +612,26 @@ module core0(
       lstack_index <= 0;
       lstack_total <= 0;
       lstack_beginning <= 0;
-      lstack_dc0 <= 0;
       lstack_ending <= ~0;
-      mem_ctrl_conveyor_memload_last <= 0;
-      mem_ctrl_dstack_memload_last <= 0;
+      mem_control_conveyor_memload_last <= 0;
+      mem_control_dstack_memload_last <= 0;
 
       // Initialize the global self permission
       global_self_permission <= 0;
     end else begin
       pc <= pc_next;
       dc_vals <= dc_vals_next;
-      dc_reload <= dc_ctrl_reload;
-      dc_mutate <= dc_ctrl_choice;
+      dc_reload <= dc_control_reload;
+      dc_mutate <= dc_control_choice;
       if (handle_interrupt) begin
         interrupt_active <= 1'b1;
         // Clear these so they get reloaded again when we return from the interrupt
         // This only matters if they would have otherwise been set to 1
-        mem_ctrl_conveyor_memload_last <= 1'b0;
-        mem_ctrl_dstack_memload_last <= 1'b0;
+        mem_control_conveyor_memload_last <= 1'b0;
+        mem_control_dstack_memload_last <= 1'b0;
       end else begin
-        mem_ctrl_conveyor_memload_last <= mem_ctrl_conveyor_memload;
-        mem_ctrl_dstack_memload_last <= mem_ctrl_dstack_memload;
+        mem_control_conveyor_memload_last <= mem_control_conveyor_memload;
+        mem_control_dstack_memload_last <= mem_control_dstack_memload;
       end
       // On the exit of an interrupt, switch back to the normal state and pipelines
       if (returning && cstack_top_interrupt)
@@ -672,8 +652,7 @@ module core0(
       casez (instruction)
         `I_INTEN: interrupt_enables <= bus_selections;
         `I_INTSET: begin
-          interrupt_addresses <= interrupt_addresses_iset;
-          interrupt_dc0s <= interrupt_dc0s_iset;
+          interrupt_addresses <= interrupt_addresses_intset;
         end
         `I_SEB: bus_selections <= (1'b1 << dstack_top);
         `I_SLB: bus_selections[dstack_top] <= 1'b1;
