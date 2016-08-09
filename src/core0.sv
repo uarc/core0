@@ -171,8 +171,6 @@ module core0(
   reg [UARC_SETS-1:0][WORD_WIDTH-1:0] interrupt_enables;
   reg [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses;
   wire [TOTAL_BUSES-1:0][PROGRAM_ADDR_WIDTH-1:0] interrupt_addresses_iset;
-  reg [TOTAL_BUSES-1:0][MAIN_ADDR_WIDTH-1:0] interrupt_dc0s;
-  wire [TOTAL_BUSES-1:0][MAIN_ADDR_WIDTH-1:0] interrupt_dc0s_iset;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_set;
   wire [TOTAL_BUSES-1:0][WORD_WIDTH-1:0] bus_selections_sel;
 
@@ -222,7 +220,7 @@ module core0(
   wire [WORD_WIDTH-1:0] dstack_top;
   wire [WORD_WIDTH-1:0] dstack_second;
   wire [WORD_WIDTH-1:0] dstack_third;
-  wire [5:0] dstack_rot_addr;
+  wire [4:0] dstack_rot_addr;
   wire [WORD_WIDTH-1:0] dstack_rot_val;
   wire dstack_rotate;
   wire dstack_overflow;
@@ -411,7 +409,8 @@ module core0(
 
   // Assign signals for lstack
   assign lstack_push = instruction == `I_ILOOP || instruction == `I_LOOP;
-  assign lstack_pop = !halt && (instruction == `I_BREAK || (lstack_index_advance == lstack_total && lstack_next_iter));
+  assign lstack_pop = !halt &&
+    (instruction == `I_BREAK || (!lstack_infinite && lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index};
   assign lstack_index_advance = lstack_index + 1;
   assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc_advance == lstack_ending);
@@ -692,8 +691,9 @@ module core0(
         `I_ILOOP: begin
           lstack_beginning <= pc_advance;
           lstack_ending <= dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0];
-          lstack_total <= dstack_top;
-          lstack_dc0 <= dc_nexts[0];
+          lstack_infinite <= 1'b1;
+          // Specify that it should actually wrap around at the maximum integer.
+          lstack_total <= {WORD_WIDTH{1'b0}};
           lstack_index <= 0;
         end
         `I_SETPA: begin
@@ -703,8 +703,8 @@ module core0(
         `I_LOOP: begin
           lstack_beginning <= pc_advance;
           lstack_ending <= dstack_top[PROGRAM_ADDR_WIDTH-1:0];
+          lstack_infinite <= 1'b0;
           lstack_total <= dstack_second;
-          lstack_dc0 <= dc_nexts[0];
           lstack_index <= 0;
         end
         `I_SEF: fault_handlers[dstack_top] <= dstack_second;
