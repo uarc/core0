@@ -8,6 +8,7 @@ module alu_control(
   second,
   carry,
   pc,
+  pc_advance,
   dcs,
   dc_vals,
 
@@ -26,7 +27,7 @@ module alu_control(
   input [WORD_WIDTH-1:0] top;
   input [WORD_WIDTH-1:0] second;
   input carry;
-  input [WORD_WIDTH-1:0] pc;
+  input [WORD_WIDTH-1:0] pc, pc_advance;
   input [3:0][WORD_WIDTH-1:0] dcs;
   input [3:0][WORD_WIDTH-1:0] dc_vals;
 
@@ -110,9 +111,9 @@ module alu_control(
         store_overflow = 1'b0;
       end
       `I_ILOOP: begin
-        alu_a = pc;
+        alu_a = pc_advance;
         alu_b = imm16;
-        alu_ic = 1'b0;
+        alu_ic = 1'b1;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
         store_overflow = 1'b0;
@@ -454,9 +455,9 @@ module alu_control(
         store_overflow = 1'b0;
       end
       `I_LOOP: begin
-        alu_a = pc;
+        alu_a = pc_advance;
         alu_b = imm16;
-        alu_ic = 1'b0;
+        alu_ic = 1'b1;
         alu_opcode = `OP_ADD;
         store_carry = 1'b0;
         store_overflow = 1'b0;

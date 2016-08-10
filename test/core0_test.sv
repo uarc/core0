@@ -277,14 +277,13 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 2; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
     $display("add immediate: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/loop_immediate_prog.list", programmem);
-    $readmemh("bin/loop_immediate_data.list", mainmem);
+    $readmemh("bin/loop.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -292,12 +291,12 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 5; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("loop immediate: %s",
-      (core0_base.core0.dstack_top == 0 &&
+    $display("loop: %s",
+      (core0_base.core0.dstack_top == 2 &&
         core0_base.core0.dstack_second == 1 &&
         core0_base.core0.dstack_third == 0) ? "pass" : "fail");
 

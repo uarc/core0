@@ -30,7 +30,7 @@ module alu(
 
   wire [WIDTH:0] sum;
 
-  assign sum = a + b;
+  assign sum = a + b + ic;
 
   always @* begin
     case (opcode)

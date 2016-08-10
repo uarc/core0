@@ -302,7 +302,7 @@ module core0(
     .second(dstack_second),
     .carry,
     .pc({{(WORD_WIDTH-PROGRAM_ADDR_WIDTH){1'b0}}, pc}),
-    // Pad each DC individually with 0s so they can be added in the ALU
+    .pc_advance({{(WORD_WIDTH-PROGRAM_ADDR_WIDTH){1'b0}}, pc_advance}),
     .dcs({
       {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[3]},
       {{(WORD_WIDTH-MAIN_ADDR_WIDTH){1'b0}}, dcs[2]},
@@ -657,9 +657,9 @@ module core0(
         end
         `I_LOOP: begin
           lstack_beginning <= pc_advance;
-          lstack_ending <= dstack_top[PROGRAM_ADDR_WIDTH-1:0];
+          lstack_ending <= alu_out[PROGRAM_ADDR_WIDTH-1:0];
           lstack_infinite <= 1'b0;
-          lstack_total <= dstack_second;
+          lstack_total <= dstack_top;
           lstack_index <= 0;
         end
         `I_SEF: fault_handlers[dstack_top] <= dstack_second;
