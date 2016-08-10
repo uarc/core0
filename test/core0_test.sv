@@ -373,8 +373,7 @@ module core0_test;
 
     $display("writep: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
 
-    $readmemh("bin/interrupt_prog.list", programmem);
-    $readmemh("bin/interrupt_data.list", mainmem);
+    $readmemh("bin/interrupt.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -383,23 +382,27 @@ module core0_test;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
     // Give it a sufficient amount of cycles to set up and do other things
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
     // Now interrupt it
     receiver_sends = 1'b1;
-    receiver_datas = 8;
+    receiver_datas[0] = 88;
     // Check to make sure it acknowledges the interrupt
     #1 sequential_test_success = receiver_send_acks[0];
     // Clock it once to enter the interrupt
     clk = 0; #1; clk = 1; #1;
+    // Unassert the interrupt, now that it has been acknowledged
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    // Ensure it only acks on the cycle it accepts the interrupt.
+    #1 sequential_test_success = sequential_test_success && !receiver_send_acks[0];
     // Clock it again to run the first instruction
     clk = 0; #1; clk = 1; #1;
 
-    $display("interrupt: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
+    $display("interrupt: %s", sequential_test_success && core0_base.core0.dstack_top == 8 ? "pass" : "fail");
 
-    $readmemh("bin/interrupt_value_prog.list", programmem);
-    $readmemh("bin/interrupt_value_data.list", mainmem);
+    $readmemh("bin/interrupt_value.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -408,20 +411,25 @@ module core0_test;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
     // Give it a sufficient amount of cycles to set up and do other things
-    for (int i = 0; i < 8; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
     // Now interrupt it
     receiver_sends = 1'b1;
-    receiver_datas = 8;
+    receiver_datas[0] = 88;
     // Check to make sure it acknowledges the interrupt
     #1 sequential_test_success = receiver_send_acks[0];
     // Clock it once to enter the interrupt
     clk = 0; #1; clk = 1; #1;
+    // Unassert the interrupt, now that it has been acknowledged
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    // Ensure it only acks on the cycle it accepts the interrupt.
+    #1 sequential_test_success = sequential_test_success && !receiver_send_acks[0];
     // Clock it again to run the first instruction
     clk = 0; #1; clk = 1; #1;
 
-    $display("interrupt value: %s", sequential_test_success && core0_base.core0.dstack_top == 8 ? "pass" : "fail");
+    $display("interrupt value: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
   end
 
   wire [(8 + WORD_WIDTH)-1:0] full_read_value;

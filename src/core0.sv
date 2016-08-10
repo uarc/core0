@@ -380,7 +380,7 @@ module core0(
         );
 
       assign interrupt_addresses_intset[i] = bus_selections[i/WORD_WIDTH][i%WORD_WIDTH] ?
-        dstack_top[MAIN_ADDR_WIDTH-1:0] : interrupt_addresses[i];
+        dstack_top[PROGRAM_ADDR_WIDTH-1:0] : interrupt_addresses[i];
 
       assign bus_selections_set[i] = (i / WORD_WIDTH == dstack_top) ? dstack_second[i % WORD_WIDTH] : 1'b0;
     end
