@@ -300,8 +300,7 @@ module core0_test;
         core0_base.core0.dstack_second == 1 &&
         core0_base.core0.dstack_third == 0) ? "pass" : "fail");
 
-    $readmemh("bin/loop_double_nested_prog.list", programmem);
-    $readmemh("bin/loop_double_nested_data.list", mainmem);
+    $readmemh("bin/loop_double_nested.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -309,11 +308,12 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 31; i++) begin
+    for (int i = 0; i < 32; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 ? "pass" : "fail");
+    $display("loop double-nested: %s", core0_base.core0.dstack_top == 2 &&
+      core0_base.core0.dstack_second == 1 ? "pass" : "fail");
 
     $readmemh("bin/calli_prog.list", programmem);
     $readmemh("bin/calli_data.list", mainmem);
