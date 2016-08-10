@@ -28,7 +28,7 @@ module core0_test;
   reg clk, reset;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   reg [(8 + WORD_WIDTH)-1:0] programmem_read_value;
-  wire [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addr;
+  wire [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addr;
   wire [WORD_WIDTH-1:0] programmem_write_mask;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
@@ -359,8 +359,7 @@ module core0_test;
 
     $display("conditional branching: %s", core0_base.core0.dstack_top == 6 && core0_base.core0.dstack_second == 5 ? "pass" : "fail");
 
-    $readmemh("bin/subroutine_dc0_prog.list", programmem);
-    $readmemh("bin/subroutine_dc0_data.list", mainmem);
+    $readmemh("bin/writep.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -368,56 +367,11 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 6; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
 
-    $display("subroutine dc0: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
-
-    $readmemh("bin/subroutine_immediate_dc0_prog.list", programmem);
-    $readmemh("bin/subroutine_immediate_dc0_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 5; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("subroutine immediate dc0: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
-
-    $readmemh("bin/subroutine_dc0_restore_prog.list", programmem);
-    $readmemh("bin/subroutine_dc0_restore_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 6; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("subroutine dc0 restore: %s", core0_base.core0.dstack_top == 10 ? "pass" : "fail");
-
-    $readmemh("bin/writep_prog.list", programmem);
-    $readmemh("bin/writep_data.list", mainmem);
-    receiver_sends = {TOTAL_BUSES{1'b0}};
-    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
-    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
-    reset = 1;
-    clk = 0; #1; clk = 1; #1;
-    reset = 0;
-    for (int i = 0; i < 5; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-
-    $display("writep: %s", core0_base.core0.dstack_top == 1 ? "pass" : "fail");
+    $display("writep: %s", core0_base.core0.dstack_top == 6 ? "pass" : "fail");
 
     $readmemh("bin/interrupt_prog.list", programmem);
     $readmemh("bin/interrupt_data.list", mainmem);
@@ -471,11 +425,17 @@ module core0_test;
   end
 
   wire [(8 + WORD_WIDTH)-1:0] full_read_value;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_values;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_masks;
 
   genvar i;
   generate
     for (i = 0; i < WORD_WIDTH/8 + 1; i = i + 1) begin : FULL_VALUE_LOOP
       assign full_read_value[i*8+7:i*8] = programmem[programmem_addr + i];
+    end
+    for (i = 0; i < WORD_WIDTH/8; i = i + 1) begin : INDIVIDUAL_OCTET_LOOP
+      assign individual_write_values[i] = programmem_write_value[i*8+7:i*8];
+      assign individual_write_masks[i] = programmem_write_mask[i*8+7:i*8];
     end
   endgenerate
 
@@ -483,8 +443,8 @@ module core0_test;
     if (programmem_we) begin
       for (int j = 0; j < WORD_WIDTH/8; j++)
         programmem[programmem_write_addr + j] <=
-          (programmem_write_value & programmem_write_mask) |
-          (programmem[programmem_write_addr + j] & ~programmem_write_mask);
+          (individual_write_values[j] & individual_write_masks[j]) |
+          (programmem[programmem_write_addr + j] & ~individual_write_masks[j]);
     end
     for (int j = 0; j < WORD_WIDTH/8 + 1; j++)
       programmem_read_value <= full_read_value;

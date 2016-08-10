@@ -91,7 +91,7 @@ module core0(
   // Program memory interface
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [(8 + WORD_WIDTH)-1:0] programmem_read_value;
-  output [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addess;
+  output [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addess;
   output [WORD_WIDTH-1:0] programmem_write_mask;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
