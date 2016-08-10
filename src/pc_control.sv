@@ -12,13 +12,14 @@ module pc_control(
   input [PROGRAM_ADDR_WIDTH-1:0] pc;
   output reg [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
 
-  wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance_imm0, pc_advance_imm8, pc_advance_imm16, pc_advance_imm32;
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance_imm0, pc_advance_imm8, pc_advance_imm16,
+    pc_advance_imm32, pc_advance_immword;
 
   assign pc_advance_imm0 = pc + 1;
   assign pc_advance_imm8 = pc + 2;
   assign pc_advance_imm16 = pc + 3;
   assign pc_advance_imm32 = pc + 5;
-  assign pc_advance_immword = pc + (WORD_WIDTH / 8);
+  assign pc_advance_immword = pc + 1 + WORD_WIDTH / 8;
 
   always @* begin
     casez (instruction)
@@ -123,6 +124,7 @@ module pc_control(
       `I_DROP: pc_advance = pc_advance_imm0;
       `I_ROTZ: pc_advance = pc_advance_imm0;
       `I_COPYZ: pc_advance = pc_advance_imm0;
+      default: pc_advance = pc_advance_imm0;
     endcase
   end
 endmodule

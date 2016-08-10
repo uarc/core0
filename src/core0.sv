@@ -226,9 +226,6 @@ module core0(
   // cstack insert signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_insert_progaddr;
   wire cstack_insert_interrupt;
-  // cstack insert on return_update signal
-  wire [PROGRAM_ADDR_WIDTH-1:0] cstack_update_progaddr;
-  wire cstack_update_interrupt;
   // cstack top signals
   wire [PROGRAM_ADDR_WIDTH-1:0] cstack_top_progaddr;
   wire cstack_top_interrupt;
@@ -342,20 +339,15 @@ module core0(
   );
 
   // Assign signals for cstack
-  assign cstack_push = call || return_update;
-  assign cstack_pop = returning || return_update;
+  assign cstack_push = call;
+  assign cstack_pop = returning;
   // cstack insert
   assign cstack_insert_progaddr =
     // Interrupts trump all and always return to the address that would have been executed next
     handle_interrupt ? pc_next_nointerrupt :
-    // If we are updating the return we always use the update progaddr
-    return_update ? cstack_update_progaddr :
     // Otherwise calls of various kinds return to the instruction following the present
     pc_advance;
-  assign cstack_insert_interrupt = return_update ? cstack_update_interrupt : handle_interrupt;
-  // cstack update
-  assign cstack_update_progaddr = cstack_top_progaddr;
-  assign cstack_update_interrupt = cstack_top_interrupt;
+  assign cstack_insert_interrupt = handle_interrupt;
 
   // TODO: Make sure when the lstack is popped from the bottom a non-active loop is pushed on the stack.
   stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
@@ -506,12 +498,8 @@ module core0(
 
   assign sender_enables = bus_selections;
 
-  assign jump_stack = instruction == `I_CALL || instruction == `I_JMP;
   assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
   assign returning = instruction == `I_RETURN;
-  // If we are doing a call or returning then the correct value will get updated anyways.
-  // However, we otherwise need to do a return_update to update unset DCs so they will be preserved on return.
-  assign return_update = !call && !returning;
 
   assign {imm, instruction} = programmem_read_value;
   // Whatever fault we will service next instruction (none if F_NONE)
@@ -596,7 +584,8 @@ module core0(
       lstack_index <= 0;
       lstack_total <= 0;
       lstack_beginning <= 0;
-      lstack_ending <= ~0;
+      lstack_infinite <= 1'b1;
+      lstack_ending <= 0;
       mem_control_conveyor_memload_last <= 0;
       mem_control_dstack_memload_last <= 0;
 
