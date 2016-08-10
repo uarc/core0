@@ -514,8 +514,9 @@ module core0(
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
     returning ? cstack_top_progaddr :
-    jump_immediate ? imm :
-    jump_stack ? dstack_top :
+    jump_immediate ? imm[PROGRAM_ADDR_WIDTH-1:0] :
+    jump_stack ? dstack_top[PROGRAM_ADDR_WIDTH-1:0] :
+    branch ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
     lstack_pop ? lstack_ending :
     lstack_next_iter ? lstack_beginning :
     pc_advance;

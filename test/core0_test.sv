@@ -344,8 +344,7 @@ module core0_test;
     $display("calli double nested: %s",
       core0_base.core0.dstack_top == 11 && core0_base.core0.dstack_second == 10 ? "pass" : "fail");
 
-    $readmemh("bin/conditional_branching_prog.list", programmem);
-    $readmemh("bin/conditional_branching_data.list", mainmem);
+    $readmemh("bin/conditional_branching.list", programmem);
     receiver_sends = {TOTAL_BUSES{1'b0}};
     receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
     programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
@@ -354,16 +353,11 @@ module core0_test;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
-    for (int i = 0; i < 3; i++) begin
+    for (int i = 0; i < 16; i++) begin
       clk = 0; #1; clk = 1; #1;
     end
-    sequential_test_success = sequential_test_success && core0_base.core0.pc == 3;
-    for (int i = 0; i < 2; i++) begin
-      clk = 0; #1; clk = 1; #1;
-    end
-    sequential_test_success = sequential_test_success && core0_base.core0.pc == 8;
 
-    $display("conditional branching: %s", sequential_test_success ? "pass" : "fail");
+    $display("conditional branching: %s", core0_base.core0.dstack_top == 6 && core0_base.core0.dstack_second == 5 ? "pass" : "fail");
 
     $readmemh("bin/subroutine_dc0_prog.list", programmem);
     $readmemh("bin/subroutine_dc0_data.list", mainmem);
