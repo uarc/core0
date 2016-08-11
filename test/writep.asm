@@ -1,39 +1,13 @@
-# Add increment instruction to stack
-0x8
-# Add address of location to write instruction to
-1
-# Write instruction
-writep
-# Push 0 onto stack
-0
-# Blank push 0 instructions which will be overwritten
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-# Fill out data space
-align:0,8
+# Place a value in the immediate location
+6 writepi:immval
+
+# Create a tag to the immediate location in memory
+imm32 :immval mfill:0,4
+
+# Loop forever
+iloop:+
+rot0
+:+
+
+# Align the program
+palign:0xC0,32

@@ -635,7 +635,7 @@ module core0(
         `I_SEL: bus_selections <= bus_selections_sel;
         `I_ILOOP: begin
           lstack_beginning <= pc_advance;
-          lstack_ending <= dc_vals_next[0][PROGRAM_ADDR_WIDTH-1:0];
+          lstack_ending <= alu_out[PROGRAM_ADDR_WIDTH-1:0];
           lstack_infinite <= 1'b1;
           // Specify that it should actually wrap around at the maximum integer.
           lstack_total <= {WORD_WIDTH{1'b0}};
