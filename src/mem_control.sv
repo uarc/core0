@@ -7,6 +7,7 @@ module mem_control(
   top,
   second,
   alu_out,
+  astack_top,
   stream_in,
   stream_in_value,
   stream_out,
@@ -32,6 +33,7 @@ module mem_control(
   input [WORD_WIDTH-1:0] top;
   input [WORD_WIDTH-1:0] second;
   input [MAIN_ADDR_WIDTH-1:0] alu_out;
+  input [MAIN_ADDR_WIDTH-1:0] astack_top;
   input stream_in, stream_out;
   input [WORD_WIDTH-1:0] stream_in_value;
   input [MAIN_ADDR_WIDTH-1:0] stream_address;
@@ -217,6 +219,18 @@ module mem_control(
           write_value = {WORD_WIDTH{1'bx}};
           read_address = top[MAIN_ADDR_WIDTH-1:0];
           conveyor_memload = 1'b1;
+          dstack_memload = 1'b0;
+        end
+        `I_POPZ: begin
+          reload = 1'b1;
+          choice = instruction[1:0];
+          dc_nexts = dcs;
+          dc_nexts[choice] = astack_top;
+          write_out = 1'b0;
+          write_address = {MAIN_ADDR_WIDTH{1'bx}};
+          write_value = {WORD_WIDTH{1'bx}};
+          read_address = astack_top;
+          conveyor_memload = 1'b0;
           dstack_memload = 1'b0;
         end
         default: begin

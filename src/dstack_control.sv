@@ -63,9 +63,21 @@ module dstack_control(
             rotate_addr = instruction[4:0];
           end
         end else begin
-          movement = instruction[5:4];
-          rotate = 1'b0;
-          rotate_addr = 5'bx;
+          if (instruction[5:4] == 2'b11) begin
+            if (instruction[3]) begin
+              movement = 2'b00;
+              rotate = 1'b0;
+              rotate_addr = 5'bx;
+            end else begin
+              movement = 2'b10;
+              rotate = 1'b0;
+              rotate_addr = 5'bx;
+            end
+          end else begin
+            movement = instruction[5:4];
+            rotate = 1'b0;
+            rotate_addr = 5'bx;
+          end
         end
       end else begin
         movement = instruction[6:5];
@@ -175,6 +187,11 @@ module dstack_control(
       `I_WRITEPI: next_top = second;
       `I_WRITEPRI: next_top = second;
       `I_DROP: next_top = second;
+      `I_PUSHZ: next_top = top;
+      `I_POPZ: next_top = top;
+      `I_BA: next_top = second;
+      `I_BNA: next_top = second;
+      `I_WRITEPORI: next_top = second;
       `I_ROTZ: next_top = rotate_value;
       `I_COPYZ: next_top = rotate_value;
       default: next_top = {WORD_WIDTH{1'bx}};

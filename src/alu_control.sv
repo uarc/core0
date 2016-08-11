@@ -494,6 +494,30 @@ module alu_control(
         store_carry = 1'b0;
         store_overflow = 1'b0;
       end
+      `I_BA: begin
+        alu_a = pc;
+        alu_b = simm16;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b0;
+        store_overflow = 1'b0;
+      end
+      `I_BNA: begin
+        alu_a = pc;
+        alu_b = simm16;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b0;
+        store_overflow = 1'b0;
+      end
+      `I_WRITEPORI: begin
+        alu_a = pc;
+        alu_b = simm16;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b0;
+        store_overflow = 1'b0;
+      end
       default: begin
         alu_a = {WORD_WIDTH{1'bx}};
         alu_b = {WORD_WIDTH{1'bx}};

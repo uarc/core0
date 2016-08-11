@@ -123,6 +123,11 @@ module pc_control(
       `I_WRITEPI: pc_advance = pc_advance_immword;
       `I_WRITEPRI: pc_advance = pc_advance_imm16;
       `I_DROP: pc_advance = pc_advance_imm0;
+      `I_PUSHZ: pc_advance = pc_advance_imm0;
+      `I_POPZ: pc_advance = pc_advance_imm0;
+      `I_BA: pc_advance = pc_advance_imm16;
+      `I_BNA: pc_advance = pc_advance_imm16;
+      `I_WRITEPORI: pc_advance = pc_advance_imm16;
       `I_ROTZ: pc_advance = pc_advance_imm0;
       `I_COPYZ: pc_advance = pc_advance_imm0;
       default: pc_advance = pc_advance_imm0;

@@ -75,6 +75,8 @@ module core0(
   parameter PROGRAM_ADDR_WIDTH = 1;
   /// This is the width of the main memory address bus
   parameter MAIN_ADDR_WIDTH = 1;
+  /// This is how many DCs fit on the astack
+  parameter ASTACK_DEPTH = 8;
   /// This is how many recursions are possible with the cstack
   parameter CSTACK_DEPTH = 2;
   /// This is how many loops can be nested with the lstack
@@ -218,6 +220,11 @@ module core0(
   wire dstack_overflow;
   wire dstack_underflow;
 
+  wire astack_push;
+  wire astack_pop;
+  wire [MAIN_ADDR_WIDTH-1:0] astack_insert;
+  wire [MAIN_ADDR_WIDTH-1:0] astack_top;
+
   localparam CSTACK_WIDTH = PROGRAM_ADDR_WIDTH + 1;
 
   // Signals for the cstack
@@ -330,6 +337,18 @@ module core0(
     .underflow(dstack_underflow)
   );
 
+  stack #(.WIDTH(MAIN_ADDR_WIDTH), .DEPTH(CSTACK_DEPTH), .VISIBLES(1)) astack(
+    .clk,
+    .push(astack_push),
+    .pop(astack_pop),
+    .insert(astack_insert),
+    .tops(astack_top)
+  );
+
+  assign astack_push = instruction[7:2] == `I_PUSHM;
+  assign astack_pop = instruction[7:2] == `I_POPM;
+  assign astack_insert = dc_nexts[instruction[1:0]];
+
   stack #(.WIDTH(CSTACK_WIDTH), .DEPTH(CSTACK_DEPTH), .VISIBLES(1)) cstack(
     .clk,
     .push(cstack_push),
@@ -400,6 +419,7 @@ module core0(
     .top(dstack_top),
     .second(dstack_second),
     .alu_out(alu_out[MAIN_ADDR_WIDTH-1:0]),
+    .astack_top,
     // TODO: Make stream controller.
     .stream_in(1'b0),
     .stream_in_value({WORD_WIDTH{1'bx}}),
@@ -431,13 +451,14 @@ module core0(
     .dc_vals_next
   );
 
-  flow_control #(.WORD_WIDTH(WORD_WIDTH)) flow_control(
+  flow_control #(.WORD_WIDTH(WORD_WIDTH), .TOTAL_BUSES(TOTAL_BUSES)) flow_control(
     .instruction,
     .top(dstack_top),
     .second(dstack_second),
     .carry,
     .overflow,
     .interrupt,
+    .receiver_sends,
     .jump_immediate,
     .jump_stack,
     .branch

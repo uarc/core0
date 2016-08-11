@@ -7,15 +7,18 @@ module flow_control(
   carry,
   overflow,
   interrupt,
+  receiver_sends,
   jump_immediate,
   jump_stack,
   branch
 );
   parameter WORD_WIDTH = 32;
+  parameter TOTAL_BUSES = 1;
 
   input [7:0] instruction;
   input [WORD_WIDTH-1:0] top, second;
   input carry, overflow, interrupt;
+  input [TOTAL_BUSES-1:0] receiver_sends;
   output reg jump_immediate, jump_stack;
   output reg branch;
 
@@ -113,6 +116,16 @@ module flow_control(
       end
       `I_BNZ: begin
         branch = top != {WORD_WIDTH{1'b0}};
+        jump_immediate = 1'b0;
+        jump_stack = 1'b0;
+      end
+      `I_BA: begin
+        branch = receiver_sends[top];
+        jump_immediate = 1'b0;
+        jump_stack = 1'b0;
+      end
+      `I_BNA: begin
+        branch = !receiver_sends[top];
         jump_immediate = 1'b0;
         jump_stack = 1'b0;
       end
