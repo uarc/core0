@@ -152,6 +152,7 @@ module dstack_control(
       `I_BNO: next_top = top;
       `I_BI: next_top = top;
       `I_BNI: next_top = top;
+      `I_INDEXZ: next_top = alu_out;
       `I_IMM8: next_top = imm8;
       `I_IMM16: next_top = imm16;
       `I_IMM32: next_top = imm;

@@ -100,6 +100,7 @@ module pc_control(
       `I_BNO: pc_advance = pc_advance_imm16;
       `I_BI: pc_advance = pc_advance_imm16;
       `I_BNI: pc_advance = pc_advance_imm16;
+      `I_INDEXZ: pc_advance = pc_advance_imm8;
       `I_IMM8: pc_advance = pc_advance_imm8;
       `I_IMM16: pc_advance = pc_advance_imm16;
       `I_IMM32: pc_advance = pc_advance_imm32;

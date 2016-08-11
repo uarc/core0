@@ -438,6 +438,14 @@ module alu_control(
         store_carry = 1'b0;
         store_overflow = 1'b0;
       end
+      `I_INDEXZ: begin
+        alu_a = dcs[instruction[1:0]];
+        alu_b = imm8;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b0;
+        store_overflow = 1'b0;
+      end
       `I_OR: begin
         alu_a = second;
         alu_b = top;
