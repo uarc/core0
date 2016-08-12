@@ -15,6 +15,8 @@ module core0_uforth;
   /// This is the width of the main memory address bus
   localparam MAIN_ADDR_WIDTH = 11;
   localparam MEMORY_SIZE = 1 << MAIN_ADDR_WIDTH;
+  /// This is how many DCs fit on the astack
+  parameter ASTACK_DEPTH = 64;
   /// This is how many recursions are possible with the cstack
   localparam CSTACK_DEPTH = 16;
   /// This is how many loops can be nested with the lstack
@@ -30,8 +32,8 @@ module core0_uforth;
 
   reg clk, reset;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
-  reg [7:0] programmem_read_value;
-  wire [((PROGRAM_ADDR_WIDTH+WORD_WIDTH/8-1)/(WORD_WIDTH/8))-1:0] programmem_write_addr;
+  reg [(8 + WORD_WIDTH)-1:0] programmem_read_value;
+  wire [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addr;
   wire [WORD_WIDTH-1:0] programmem_write_mask;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
@@ -94,6 +96,7 @@ module core0_uforth;
       .TOTAL_BUSES(TOTAL_BUSES),
       .PROGRAM_ADDR_WIDTH(PROGRAM_ADDR_WIDTH),
       .MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH),
+      .ASTACK_DEPTH(ASTACK_DEPTH),
       .CSTACK_DEPTH(CSTACK_DEPTH),
       .LSTACK_DEPTH(LSTACK_DEPTH),
       .CONVEYOR_ADDR_WIDTH(CONVEYOR_ADDR_WIDTH)
@@ -186,24 +189,30 @@ module core0_uforth;
     end
   end
 
-  genvar gi;
-  wire [WORD_WIDTH/8-1:0][7:0] progmem_individuals;
-  wire [WORD_WIDTH/8-1:0][7:0] progmem_individual_masks;
+  wire [(8 + WORD_WIDTH)-1:0] full_read_value;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_values;
+  wire [WORD_WIDTH/8-1:0][7:0] individual_write_masks;
+
+  genvar i;
   generate
-    for (gi = 0; gi < WORD_WIDTH/8; gi = gi + 1) begin : INDIVIDUAL_PMEM_LOOP
-      assign progmem_individuals[gi] = programmem_write_value[gi*8+7:gi*8];
-      assign progmem_individual_masks[gi] = programmem_write_mask[gi*8+7:gi*8];
+    for (i = 0; i < WORD_WIDTH/8 + 1; i = i + 1) begin : FULL_VALUE_LOOP
+      assign full_read_value[i*8+7:i*8] = programmem[programmem_addr + i];
+    end
+    for (i = 0; i < WORD_WIDTH/8; i = i + 1) begin : INDIVIDUAL_OCTET_LOOP
+      assign individual_write_values[i] = programmem_write_value[i*8+7:i*8];
+      assign individual_write_masks[i] = programmem_write_mask[i*8+7:i*8];
     end
   endgenerate
 
   always @(posedge clk) begin
     if (programmem_we) begin
       for (int j = 0; j < WORD_WIDTH/8; j++)
-        programmem[programmem_write_addr*(WORD_WIDTH/8) + j] <=
-          (programmem[programmem_write_addr*(WORD_WIDTH/8) + j] & (~progmem_individual_masks[j])) |
-          (progmem_individuals[j] & progmem_individual_masks[j]);
+        programmem[programmem_write_addr + j] <=
+          (individual_write_values[j] & individual_write_masks[j]) |
+          (programmem[programmem_write_addr + j] & ~individual_write_masks[j]);
     end
-    programmem_read_value <= programmem[programmem_addr];
+    for (int j = 0; j < WORD_WIDTH/8 + 1; j++)
+      programmem_read_value <= full_read_value;
     if (mainmem_we)
       mainmem[mainmem_write_addr] <= mainmem_write_value;
     mainmem_read_value <= mainmem[mainmem_read_addr];

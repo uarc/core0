@@ -60,6 +60,8 @@ module core0_base(
   parameter PROGRAM_ADDR_WIDTH = 1;
   /// This is the width of the main memory address bus
   parameter MAIN_ADDR_WIDTH = 1;
+  /// This is how many DCs fit on the astack
+  parameter ASTACK_DEPTH = 8;
   /// This is how many recursions are possible with the cstack
   parameter CSTACK_DEPTH = 2;
   /// This is how many loops can be nested with the lstack
@@ -121,6 +123,7 @@ module core0_base(
     .TOTAL_BUSES(TOTAL_BUSES),
     .PROGRAM_ADDR_WIDTH(PROGRAM_ADDR_WIDTH),
     .MAIN_ADDR_WIDTH(MAIN_ADDR_WIDTH),
+    .ASTACK_DEPTH(ASTACK_DEPTH),
     .CSTACK_DEPTH(CSTACK_DEPTH),
     .LSTACK_DEPTH(LSTACK_DEPTH),
     .CONVEYOR_ADDR_WIDTH(CONVEYOR_ADDR_WIDTH)
