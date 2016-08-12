@@ -254,6 +254,8 @@ module core0(
   wire [WORD_WIDTH-1:0] lstack_index_advance;
   wire lstack_next_iter;
   wire lstack_move_beginning;
+  // Signals to move to the end of the loop
+  wire lstack_move_to_end;
   // Is 1 on a cycle where we are entering a loop that will never run.
   wire lstack_dontloop;
   wire [3:0][WORD_WIDTH-1:0] iterators;
@@ -382,11 +384,12 @@ module core0(
   // Assign signals for lstack
   assign lstack_push = instruction == `I_ILOOP || (instruction == `I_LOOP && !lstack_dontloop);
   assign lstack_pop = !halt &&
-    (instruction == `I_BREAK || (!lstack_infinite && lstack_index_advance == lstack_total && lstack_next_iter));
+    (instruction == `I_DISCARD || instruction == `I_BREAK || (!lstack_infinite && lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index};
   assign lstack_index_advance = lstack_index + 1;
   assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc_advance == lstack_ending);
   assign lstack_move_beginning = lstack_next_iter && !lstack_pop;
+  assign lstack_move_to_end = lstack_pop && instruction != `I_DISCARD;
   assign lstack_dontloop = instruction == `I_LOOP && dstack_top == {WORD_WIDTH{1'b0}};
   assign iterators[0] = lstack_index;
   assign iterators[1] = lstack_tops[0][WORD_WIDTH-1:0];
@@ -542,7 +545,7 @@ module core0(
     jump_immediate ? imm[PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top[PROGRAM_ADDR_WIDTH-1:0] :
     branch ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
-    lstack_pop ? lstack_ending :
+    lstack_move_to_end ? lstack_ending :
     lstack_next_iter ? lstack_beginning :
     pc_advance;
   assign pc_next = reset ? {PROGRAM_ADDR_WIDTH{1'b0}} :

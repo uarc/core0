@@ -44,6 +44,7 @@ module pc_control(
       `I_CALLI: pc_advance = pc_advance_immword;
       `I_JMPI: pc_advance = pc_advance_immword;
       `I_BRA: pc_advance = pc_advance_imm16;
+      `I_DISCARD: pc_advance = pc_advance_imm0;
       `I_CVZ: pc_advance = pc_advance_imm0;
       `I_READZ: pc_advance = pc_advance_imm8;
       `I_RAREADIZ: pc_advance = pc_advance_imm8;
