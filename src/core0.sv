@@ -254,6 +254,8 @@ module core0(
   wire [WORD_WIDTH-1:0] lstack_index_advance;
   wire lstack_next_iter;
   wire lstack_move_beginning;
+  // Is 1 on a cycle where we are entering a loop that will never run.
+  wire lstack_dontloop;
   wire [3:0][WORD_WIDTH-1:0] iterators;
 
   // Signals for the interrupt chooser
@@ -378,13 +380,14 @@ module core0(
   );
 
   // Assign signals for lstack
-  assign lstack_push = instruction == `I_ILOOP || instruction == `I_LOOP;
+  assign lstack_push = instruction == `I_ILOOP || (instruction == `I_LOOP && !lstack_dontloop);
   assign lstack_pop = !halt &&
     (instruction == `I_BREAK || (!lstack_infinite && lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index};
   assign lstack_index_advance = lstack_index + 1;
   assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc_advance == lstack_ending);
   assign lstack_move_beginning = lstack_next_iter && !lstack_pop;
+  assign lstack_dontloop = instruction == `I_LOOP && dstack_top == {WORD_WIDTH{1'b0}};
   assign iterators[0] = lstack_index;
   assign iterators[1] = lstack_tops[0][WORD_WIDTH-1:0];
   assign iterators[2] = lstack_tops[1][WORD_WIDTH-1:0];
@@ -455,6 +458,7 @@ module core0(
     .instruction,
     .top(dstack_top),
     .second(dstack_second),
+    .lstack_dontloop,
     .carry,
     .overflow,
     .interrupt,

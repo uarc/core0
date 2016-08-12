@@ -4,6 +4,7 @@ module flow_control(
   instruction,
   top,
   second,
+  lstack_dontloop,
   carry,
   overflow,
   interrupt,
@@ -17,6 +18,7 @@ module flow_control(
 
   input [7:0] instruction;
   input [WORD_WIDTH-1:0] top, second;
+  input lstack_dontloop;
   input carry, overflow, interrupt;
   input [TOTAL_BUSES-1:0] receiver_sends;
   output reg jump_immediate, jump_stack;
@@ -108,6 +110,11 @@ module flow_control(
         branch = 1'b0;
         jump_immediate = 1'b0;
         jump_stack = 1'b1;
+      end
+      `I_LOOP: begin
+        branch = lstack_dontloop;
+        jump_immediate = 1'b0;
+        jump_stack = 1'b0;
       end
       `I_BZ: begin
         branch = top == {WORD_WIDTH{1'b0}};

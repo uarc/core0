@@ -430,6 +430,21 @@ module core0_test;
     clk = 0; #1; clk = 1; #1;
 
     $display("interrupt value: %s", sequential_test_success && core0_base.core0.dstack_top == 88 ? "pass" : "fail");
+
+    $readmemh("bin/loop_none.list", programmem);
+    receiver_sends = {TOTAL_BUSES{1'b0}};
+    receiver_datas = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
+    programmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    mainmem_read_value <= {MAIN_ADDR_WIDTH{1'bx}};
+    reset = 1;
+    clk = 0; #1; clk = 1; #1;
+    reset = 0;
+    // Give it a sufficient amount of cycles to set up and do other things
+    for (int i = 0; i < 16; i++) begin
+      clk = 0; #1; clk = 1; #1;
+    end
+
+    $display("loop none: %s", core0_base.core0.dstack_top == 8 ? "pass" : "fail");
   end
 
   wire [(8 + WORD_WIDTH)-1:0] full_read_value;
