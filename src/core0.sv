@@ -561,21 +561,24 @@ module core0(
     conveyor_halt;
 
   // TODO: Separate this into its own module for readability.
-  assign programmem_write_mask = instruction == `I_WRITEPO ?
+  assign programmem_write_mask = (instruction == `I_WRITEPO || instruction == `I_WRITEPORI) ?
       {{(WORD_WIDTH-8){1'b0}}, 8'hFF} :
       {WORD_WIDTH{1'b1}};
   assign programmem_write_value =
       instruction == `I_WRITEPI ? dstack_top :
       instruction == `I_WRITEPRI ? dstack_top :
+      instruction == `I_WRITEPORI ? dstack_top :
       dstack_second;
   assign programmem_we =
       instruction == `I_WRITEP ||
       instruction == `I_WRITEPO ||
       instruction == `I_WRITEPI ||
-      instruction == `I_WRITEPRI;
+      instruction == `I_WRITEPRI ||
+      instruction == `I_WRITEPORI;
   assign programmem_write_addess =
       instruction == `I_WRITEPI ? imm[PROGRAM_ADDR_WIDTH-1:0] :
       instruction == `I_WRITEPRI ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
+      instruction == `I_WRITEPORI ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
       dstack_top[PROGRAM_ADDR_WIDTH-1:0];
 
   assign global_kill = 1'b0;
