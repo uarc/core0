@@ -41,6 +41,11 @@ module flow_control(
         jump_immediate = 1'b0;
         jump_stack = 1'b0;
       end
+      `I_CALLRI: begin
+        branch = 1'b1;
+        jump_immediate = 1'b0;
+        jump_stack = 1'b0;
+      end
       `I_BC: begin
         branch = carry;
         jump_immediate = 1'b0;

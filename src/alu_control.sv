@@ -126,6 +126,14 @@ module alu_control(
         store_carry = 1'b0;
         store_overflow = 1'b0;
       end
+      `I_CALLRI: begin
+        alu_a = pc;
+        alu_b = simm16;
+        alu_ic = 1'b0;
+        alu_opcode = `OP_ADD;
+        store_carry = 1'b0;
+        store_overflow = 1'b0;
+      end
       `I_READZ: begin
         alu_a = dcs[instruction[1:0]];
         alu_b = simm8;

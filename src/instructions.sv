@@ -20,7 +20,7 @@
 `define I_JMPI 8'h1C
 `define I_BRA 8'h1D
 `define I_DISCARD 8'h1E
-//`define I_RESERVED 8'h1F
+`define I_CALLRI 8'h1F
 `define I_CVZ 8'b0010ZZZZ
 `define I_READZ 8'b001100ZZ
 `define I_RAREADIZ 8'b001101ZZ

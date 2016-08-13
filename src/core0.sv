@@ -526,7 +526,12 @@ module core0(
 
   assign sender_enables = bus_selections;
 
-  assign call = instruction == `I_CALLI || instruction == `I_CALL || handle_interrupt || fault != `F_NONE;
+  assign call =
+    instruction == `I_CALLI ||
+    instruction == `I_CALLRI ||
+    instruction == `I_CALL ||
+    handle_interrupt ||
+    fault != `F_NONE;
   assign returning = instruction == `I_RETURN;
 
   assign {imm, instruction} = programmem_read_value;

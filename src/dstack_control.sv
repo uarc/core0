@@ -109,6 +109,7 @@ module dstack_control(
       `I_JMPI: next_top = top;
       `I_BRA: next_top = top;
       `I_DISCARD: next_top = top;
+      `I_CALLRI: next_top = top;
       `I_CVZ: next_top = conveyor_value;
       `I_READZ: next_top = dc_vals[instruction[1:0]];
       `I_RAREADIZ: next_top = mem_in;
