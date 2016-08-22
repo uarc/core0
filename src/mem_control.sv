@@ -144,6 +144,18 @@ module mem_control(
           conveyor_memload = 1'b0;
           dstack_memload = 1'b0;
         end
+        `I_SETZ: begin
+          reload = 1'b1;
+          choice = instruction[1:0];
+          dc_nexts = dcs;
+          dc_nexts[choice] = top[MAIN_ADDR_WIDTH-1:0];
+          write_out = 1'b0;
+          write_address = {MAIN_ADDR_WIDTH{1'bx}};
+          write_value = {WORD_WIDTH{1'bx}};
+          read_address = top[MAIN_ADDR_WIDTH-1:0];
+          conveyor_memload = 1'b0;
+          dstack_memload = 1'b0;
+        end
         `I_RAWRITEIZ: begin
           reload = 1'b0;
           choice = 2'bx;

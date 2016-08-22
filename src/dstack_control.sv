@@ -65,11 +65,11 @@ module dstack_control(
         end else begin
           if (instruction[5:4] == 2'b11) begin
             if (instruction[3]) begin
-              movement = 2'b00;
+              movement = 2'b10;
               rotate = 1'b0;
               rotate_addr = 5'bx;
             end else begin
-              movement = 2'b10;
+              movement = 2'b00;
               rotate = 1'b0;
               rotate_addr = 5'bx;
             end

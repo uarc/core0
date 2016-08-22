@@ -630,6 +630,7 @@ module core0(
       global_self_permission <= 0;
     end else begin
       pc <= pc_next;
+      dcs <= dc_nexts;
       dc_vals <= dc_vals_next;
       dc_reload <= dc_control_reload;
       dc_mutate <= dc_control_choice;
