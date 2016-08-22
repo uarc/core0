@@ -134,6 +134,7 @@ module dstack_control(
       `I_WRITE: next_top = third;
       `I_WRITEP: next_top = third;
       `I_WRITEPO: next_top = third;
+      `I_WRITEPS: next_top = third;
       `I_BEQ: next_top = third;
       `I_BNE: next_top = third;
       `I_BLES: next_top = third;
@@ -194,6 +195,7 @@ module dstack_control(
       `I_BA: next_top = second;
       `I_BNA: next_top = second;
       `I_WRITEPORI: next_top = second;
+      `I_WRITEPSRI: next_top = second;
       `I_ROTZ: next_top = rotate_value;
       `I_COPYZ: next_top = rotate_value;
       default: next_top = {WORD_WIDTH{1'bx}};

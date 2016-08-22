@@ -70,6 +70,7 @@ module pc_control(
       `I_WRITE: pc_advance = pc_advance_imm0;
       `I_WRITEP: pc_advance = pc_advance_imm0;
       `I_WRITEPO: pc_advance = pc_advance_imm0;
+      `I_WRITEPS: pc_advance = pc_advance_imm0;
       `I_BEQ: pc_advance = pc_advance_imm16;
       `I_BNE: pc_advance = pc_advance_imm16;
       `I_BLES: pc_advance = pc_advance_imm16;
@@ -130,6 +131,7 @@ module pc_control(
       `I_BA: pc_advance = pc_advance_imm16;
       `I_BNA: pc_advance = pc_advance_imm16;
       `I_WRITEPORI: pc_advance = pc_advance_imm16;
+      `I_WRITEPSRI: pc_advance = pc_advance_imm16;
       `I_ROTZ: pc_advance = pc_advance_imm0;
       `I_COPYZ: pc_advance = pc_advance_imm0;
       default: pc_advance = pc_advance_imm0;
