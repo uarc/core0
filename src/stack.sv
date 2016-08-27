@@ -12,6 +12,8 @@ module stack(
   /// Depth cannot be less than 2
   parameter DEPTH = 2;
   parameter VISIBLES = 1;
+  // The value which comes up from the bottom when the stack is poped.
+  parameter BOTTOM = {WIDTH{1'bx}};
 
   input clk;
   input push;
@@ -62,7 +64,7 @@ module stack(
     .push(actual_push),
     .pop(actual_pop),
     .above(data[DEPTH-2]),
-    .below({WIDTH{1'bx}}),
+    .below(BOTTOM),
     .out(data[DEPTH-1])
   );
 endmodule

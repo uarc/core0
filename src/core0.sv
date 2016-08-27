@@ -178,6 +178,8 @@ module core0(
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_advance;
   // The next PC assuming no interrupt.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_nointerrupt;
+  // The next PC assuming no loop.
+  wire [PROGRAM_ADDR_WIDTH-1:0] pc_next_noloop;
   // The actual next PC. Program memory is loaded here.
   wire [PROGRAM_ADDR_WIDTH-1:0] pc_next;
   // This is asserted when the processor is jumping to an absolute location from an immediate value.
@@ -239,6 +241,8 @@ module core0(
 
   // beginning (program) + ending (program) + infinite (flag) + total (word) + index (word)
   localparam LSTACK_WIDTH = 2 * PROGRAM_ADDR_WIDTH + 1 + 2 * WORD_WIDTH;
+  localparam LSTACK_DEFAULT =
+      {{PROGRAM_ADDR_WIDTH{1'b0}}, {PROGRAM_ADDR_WIDTH{1'b0}}, 1'b1, {WORD_WIDTH{1'b0}}, {WORD_WIDTH{1'b0}}};
 
   // Signals for the lstack
   wire lstack_push;
@@ -372,8 +376,7 @@ module core0(
     pc_advance;
   assign cstack_insert_interrupt = handle_interrupt;
 
-  // TODO: Make sure when the lstack is popped from the bottom a non-active loop is pushed on the stack.
-  stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3)) lstack(
+  stack #(.WIDTH(LSTACK_WIDTH), .DEPTH(LSTACK_DEPTH), .VISIBLES(3), .BOTTOM(LSTACK_DEFAULT)) lstack(
     .clk,
     .push(lstack_push),
     .pop(lstack_pop),
@@ -387,7 +390,10 @@ module core0(
     (instruction == `I_DISCARD || instruction == `I_BREAK || (!lstack_infinite && lstack_index_advance == lstack_total && lstack_next_iter));
   assign lstack_insert = {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index};
   assign lstack_index_advance = lstack_index + 1;
-  assign lstack_next_iter = !halt && (instruction == `I_CONTINUE || pc_advance == lstack_ending);
+  assign lstack_next_iter = !halt &&
+      // On an interrupt, we always perform the next iteration on return from the interrupt.
+      // Loops have higher precendence than return, so returning from an interrupt can go to the beginning of the loop.
+      (instruction == `I_CONTINUE || (pc_next_noloop == lstack_ending && !handle_interrupt));
   assign lstack_move_beginning = lstack_next_iter && !lstack_pop;
   assign lstack_move_to_end = lstack_pop && instruction != `I_DISCARD;
   assign lstack_dontloop = instruction == `I_LOOP && dstack_top == {WORD_WIDTH{1'b0}};
@@ -543,16 +549,18 @@ module core0(
     dstack_underflow ? `F_DATA_STACK_UNDERFLOW :
     conveyor_fault;
 
-  assign pc_next_nointerrupt =
+  assign pc_next_noloop =
     halt ? pc :
     fault != `F_NONE ? fault_handlers[fault] :
     returning ? cstack_top_progaddr :
     jump_immediate ? imm[PROGRAM_ADDR_WIDTH-1:0] :
     jump_stack ? dstack_top[PROGRAM_ADDR_WIDTH-1:0] :
     branch ? alu_out[PROGRAM_ADDR_WIDTH-1:0] :
+    pc_advance;
+  assign pc_next_nointerrupt =
     lstack_move_to_end ? lstack_ending :
     lstack_next_iter ? lstack_beginning :
-    pc_advance;
+    pc_next_noloop;
   assign pc_next = reset ? {PROGRAM_ADDR_WIDTH{1'b0}} :
     handle_interrupt ? chosen_interrupt_address : pc_next_nointerrupt;
   assign programmem_addr = pc_next;
@@ -607,8 +615,8 @@ module core0(
   assign soft_reset = instruction == `I_RESET;
 
   always @(posedge clk) begin
+    pc <= pc_next;
     if (reset || soft_reset) begin
-      pc <= 0;
       dcs <= 0;
       dc_vals <= 0;
       dc_mutate <= 0;
@@ -623,18 +631,13 @@ module core0(
       interrupt_enables <= 0;
 
       // Initialize the lstack so it would effectively loop over the entire program infinitely
-      lstack_index <= 0;
-      lstack_total <= 0;
-      lstack_beginning <= 0;
-      lstack_infinite <= 1'b1;
-      lstack_ending <= 0;
+      {lstack_beginning, lstack_ending, lstack_infinite, lstack_total, lstack_index} <= LSTACK_DEFAULT;
       mem_control_conveyor_memload_last <= 0;
       mem_control_dstack_memload_last <= 0;
 
       // Initialize the global self permission
       global_self_permission <= 0;
     end else begin
-      pc <= pc_next;
       dcs <= dc_nexts;
       dc_vals <= dc_vals_next;
       dc_reload <= dc_control_reload;
