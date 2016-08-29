@@ -65,8 +65,8 @@
 `define I_SEF 8'h79
 `define I_RESET 8'h7A
 `define I_DDROP 8'h7B
-//`define I_RESERVED 8'h7C
-//`define I_RESERVED 8'h7D
+`define I_SENDP 8'h7C
+`define I_INCEPTP 8'h7D
 //`define I_RESERVED 8'h7E
 //`define I_RESERVED 8'h7F
 `define I_ADDI 8'h80

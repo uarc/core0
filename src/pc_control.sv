@@ -87,6 +87,8 @@ module pc_control(
       `I_SEF: pc_advance = pc_advance_imm0;
       `I_RESET: pc_advance = pc_advance_imm0;
       `I_DDROP: pc_advance = pc_advance_imm0;
+      `I_SENDP: pc_advance = pc_advance_imm0;
+      `I_INCEPTP: pc_advance = pc_advance_imm0;
       `I_ADDI: pc_advance = pc_advance_immword;
       `I_ADDI8: pc_advance = pc_advance_imm8;
       `I_ADDI16: pc_advance = pc_advance_imm16;
