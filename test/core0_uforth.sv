@@ -10,17 +10,17 @@ module core0_uforth;
   /// Must be less than or equal to UARC_SETS * WORD_WIDTH
   localparam TOTAL_BUSES = 1;
   /// This is the width of the program memory address bus
-  localparam PROGRAM_ADDR_WIDTH = 11;
+  localparam PROGRAM_ADDR_WIDTH = 16;
   localparam PROGRAM_SIZE = 1 << PROGRAM_ADDR_WIDTH;
   /// This is the width of the main memory address bus
-  localparam MAIN_ADDR_WIDTH = 11;
+  localparam MAIN_ADDR_WIDTH = 16;
   localparam MEMORY_SIZE = 1 << MAIN_ADDR_WIDTH;
   /// This is how many DCs fit on the astack
   parameter ASTACK_DEPTH = 64;
   /// This is how many recursions are possible with the cstack
-  localparam CSTACK_DEPTH = 16;
+  localparam CSTACK_DEPTH = 64;
   /// This is how many loops can be nested with the lstack
-  localparam LSTACK_DEPTH = 3;
+  localparam LSTACK_DEPTH = 7;
   /// Increasing this by 1 doubles the length of the conveyor buffer
   localparam CONVEYOR_ADDR_WIDTH = 4;
 
@@ -160,6 +160,12 @@ module core0_uforth;
     reset = 0;
     while (1) begin
       clk = 0; #1; clk = 1; #1;
+      if (global_send == 1'b1) begin
+        $display("%c", global_data);
+        sender_send_acks = 1'b1;
+      end else begin
+        sender_send_acks = 1'b0;
+      end
     end
   end
 
