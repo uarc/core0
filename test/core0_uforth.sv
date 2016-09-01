@@ -90,6 +90,8 @@ module core0_uforth;
   assign receiver_incept_permissions = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
   assign receiver_incept_addresses = {(TOTAL_BUSES * WORD_WIDTH){1'b0}};
 
+  int tracker;
+
   core0_base #(
       .WORD_MAG(5),
       .UARC_SETS(UARC_SETS),
@@ -158,11 +160,19 @@ module core0_uforth;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
+    tracker = 0;
+    sender_send_acks = 1'b0;
     while (1) begin
       clk = 0; #1; clk = 1; #1;
       if (global_send == 1'b1) begin
-        $display("%c", global_data);
-        sender_send_acks = 1'b1;
+      // Simulate a 4 cycle delay.
+        tracker = tracker + 1;
+        if (tracker == 4) begin
+          $write("%c", global_data);
+          sender_send_acks = 1'b1;
+          tracker = 0;
+        end else
+          sender_send_acks = 1'b0;
       end else begin
         sender_send_acks = 1'b0;
       end

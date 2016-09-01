@@ -573,6 +573,8 @@ module core0(
 
   assign halt =
     ((interrupt_recv || instruction == `I_INTWAIT) && !chosen_send_on) ||
+    // Wait until all enabled buses are acknowledging, then we can move to the next instruction.
+    (global_send && sender_enables != sender_send_acks) ||
     mem_control_dstack_memload ||
     conveyor_halt;
 
@@ -604,7 +606,7 @@ module core0(
 
   assign global_kill = 1'b0;
   assign global_incept = 1'b0;
-  assign global_send = instruction == `I_SEND;
+  assign global_send = instruction == `I_INTSEND;
   assign global_stream = 1'b0;
   assign global_data = global_send ? dstack_top : {WORD_WIDTH{1'bx}};
   assign receiver_kill_acks = {TOTAL_BUSES{1'b0}};
