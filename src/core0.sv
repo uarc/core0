@@ -581,7 +581,7 @@ module core0(
   // TODO: Separate this into its own module for readability.
   assign programmem_write_mask =
       (instruction == `I_WRITEPO || instruction == `I_WRITEPORI) ? {{(WORD_WIDTH-8){1'b0}}, 8'hFF} :
-      (instruction == `I_WRITEPS || instruction == `I_WRITEPSRI) ? {{(WORD_WIDTH-16){1'b0}}, 16'hFF} :
+      (instruction == `I_WRITEPS || instruction == `I_WRITEPSRI) ? {{(WORD_WIDTH-16){1'b0}}, 16'hFFFF} :
       {WORD_WIDTH{1'b1}};
   assign programmem_write_value =
       instruction == `I_WRITEPI ? dstack_top :
