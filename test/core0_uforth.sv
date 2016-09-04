@@ -92,6 +92,11 @@ module core0_uforth;
 
   int tracker;
 
+  reg [255:0] [7:0] input_string;
+  int string_position;
+  int string_len;
+  reg previous_ack;
+
   core0_base #(
       .WORD_MAG(5),
       .UARC_SETS(UARC_SETS),
@@ -157,11 +162,16 @@ module core0_uforth;
 
     $readmemh("bin/uforth_prog.list", programmem);
     $readmemh("bin/uforth_data.list", mainmem);
+    input_string = ": HELLO .\42 HELLO FROM HELLO\42 CR ; HELLO\15";
+    string_position = 0;
+    string_len = 40;
     reset = 1;
     clk = 0; #1; clk = 1; #1;
     reset = 0;
     tracker = 0;
     sender_send_acks = 1'b0;
+    receiver_sends = 1'b1;
+    previous_ack = 1'b0;
     while (1) begin
       clk = 0; #1; clk = 1; #1;
       if (global_send == 1'b1) begin
@@ -176,6 +186,13 @@ module core0_uforth;
       end else begin
         sender_send_acks = 1'b0;
       end
+      if (previous_ack) begin
+          string_position = string_position + 1;
+          if (string_position == string_len)
+            string_position = 0;
+      end
+      receiver_datas = input_string[string_len - 1 - string_position];
+      previous_ack = receiver_send_acks;
     end
   end
 

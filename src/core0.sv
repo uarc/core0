@@ -566,7 +566,7 @@ module core0(
   assign programmem_addr = pc_next;
 
   assign handle_interrupt = chosen_send_on && !interrupt_active && !interrupt_recv;
-  assign interrupt_recv = instruction == `I_RECV;
+  assign interrupt_recv = instruction == `I_INTRECV;
   assign servicing_interrupt = chosen_send_on && !interrupt_active;
   assign chosen_interrupt_address = interrupt_addresses[chosen_send_bus];
   assign chosen_interrupt_value = receiver_datas[chosen_send_bus];
