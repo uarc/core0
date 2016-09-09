@@ -22,7 +22,7 @@ module core0(
   programmem_addr,
   programmem_read_value,
   programmem_write_addess,
-  programmem_write_mask,
+  programmem_byte_write_mask,
   programmem_write_value,
   programmem_we,
 
@@ -94,7 +94,7 @@ module core0(
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [(8 + WORD_WIDTH)-1:0] programmem_read_value;
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addess;
-  output [WORD_WIDTH-1:0] programmem_write_mask;
+  output [WORD_WIDTH/8-1:0] programmem_byte_write_mask;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
@@ -579,10 +579,10 @@ module core0(
     conveyor_halt;
 
   // TODO: Separate this into its own module for readability.
-  assign programmem_write_mask =
-      (instruction == `I_WRITEPO || instruction == `I_WRITEPORI) ? {{(WORD_WIDTH-8){1'b0}}, 8'hFF} :
-      (instruction == `I_WRITEPS || instruction == `I_WRITEPSRI) ? {{(WORD_WIDTH-16){1'b0}}, 16'hFFFF} :
-      {WORD_WIDTH{1'b1}};
+  assign programmem_byte_write_mask =
+      (instruction == `I_WRITEPO || instruction == `I_WRITEPORI) ? {{(WORD_WIDTH/8-1){1'b0}}, 1'b1} :
+      (instruction == `I_WRITEPS || instruction == `I_WRITEPSRI) ? {{(WORD_WIDTH/8-2){1'b0}}, 2'b11} :
+      {(WORD_WIDTH/8){1'b1}};
   assign programmem_write_value =
       instruction == `I_WRITEPI ? dstack_top :
       instruction == `I_WRITEPRI ? dstack_top :

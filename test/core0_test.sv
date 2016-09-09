@@ -29,7 +29,7 @@ module core0_test;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   reg [(8 + WORD_WIDTH)-1:0] programmem_read_value;
   wire [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addr;
-  wire [WORD_WIDTH-1:0] programmem_write_mask;
+  wire [WORD_WIDTH/8-1:0] programmem_byte_write_mask;
   wire [WORD_WIDTH-1:0] programmem_write_value;
   wire programmem_we;
 
@@ -104,7 +104,7 @@ module core0_test;
       programmem_addr,
       programmem_read_value,
       programmem_write_addr,
-      programmem_write_mask,
+      programmem_byte_write_mask,
       programmem_write_value,
       programmem_we,
 
@@ -449,7 +449,6 @@ module core0_test;
 
   wire [(8 + WORD_WIDTH)-1:0] full_read_value;
   wire [WORD_WIDTH/8-1:0][7:0] individual_write_values;
-  wire [WORD_WIDTH/8-1:0][7:0] individual_write_masks;
 
   genvar i;
   generate
@@ -458,16 +457,14 @@ module core0_test;
     end
     for (i = 0; i < WORD_WIDTH/8; i = i + 1) begin : INDIVIDUAL_OCTET_LOOP
       assign individual_write_values[i] = programmem_write_value[i*8+7:i*8];
-      assign individual_write_masks[i] = programmem_write_mask[i*8+7:i*8];
     end
   endgenerate
 
   always @(posedge clk) begin
     if (programmem_we) begin
       for (int j = 0; j < WORD_WIDTH/8; j++)
-        programmem[programmem_write_addr + j] <=
-          (individual_write_values[j] & individual_write_masks[j]) |
-          (programmem[programmem_write_addr + j] & ~individual_write_masks[j]);
+        if (programmem_byte_write_mask[j])
+          programmem[programmem_write_addr + j] <= individual_write_values[j];
     end
     for (int j = 0; j < WORD_WIDTH/8 + 1; j++)
       programmem_read_value <= full_read_value;

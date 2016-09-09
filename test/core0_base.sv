@@ -7,7 +7,7 @@ module core0_base(
   programmem_addr,
   programmem_read_value,
   programmem_write_addr,
-  programmem_write_mask,
+  programmem_byte_write_mask,
   programmem_write_value,
   programmem_we,
 
@@ -73,7 +73,7 @@ module core0_base(
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_addr;
   input [(8 + WORD_WIDTH)-1:0] programmem_read_value;
   output [PROGRAM_ADDR_WIDTH-1:0] programmem_write_addr;
-  output [WORD_WIDTH-1:0] programmem_write_mask;
+  output [WORD_WIDTH/8-1:0] programmem_byte_write_mask;
   output [WORD_WIDTH-1:0] programmem_write_value;
   output programmem_we;
 
@@ -134,7 +134,7 @@ module core0_base(
     programmem_addr,
     programmem_read_value,
     programmem_write_addr,
-    programmem_write_mask,
+    programmem_byte_write_mask,
     programmem_write_value,
     programmem_we,
 
