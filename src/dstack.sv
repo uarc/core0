@@ -62,7 +62,7 @@ module dstack(
 
   genvar i;
   generate
-    for (i = 1; i < DEPTH-3; i = i + 1) begin : DSTACK_ELEMENTS
+    for (i = 1; i < DEPTH-2; i = i + 1) begin : DSTACK_ELEMENTS
       dstack_element #(.WIDTH(WIDTH)) dstack_element(
         .clk,
         .movement(
